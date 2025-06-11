@@ -1,22 +1,20 @@
+mod config;
 mod db;
 mod entity;
-mod config;
-mod routes;
-mod models;
-mod response;
 mod errors;
 mod middleware;
+mod models;
+mod response;
+mod routes;
+mod validators;
 
-use axum::{
-    Router,
-    routing::{get},
-};
+use crate::config::Config;
+use crate::middleware::{cors_layer, tracing_layer};
+use axum::{Router, routing::get};
 use sea_orm::{ActiveModelTrait, DbConn, EntityTrait};
 use serde::{Deserialize, Serialize};
-use std::{sync::Arc};
+use std::sync::Arc;
 use tracing_subscriber::fmt::layer;
-use crate::config::Config;
-use crate::middleware::{ cors_layer, tracing_layer};
 
 #[derive(Clone)]
 struct AppState {
@@ -32,11 +30,11 @@ async fn main() {
             .await
             .expect("Failed to connect to database"),
     );
-
+    
     let state = AppState { db };
 
     let app = Router::new()
-        .merge( routes::users::routes())
+        .merge(routes::users::routes())
         .route("/health", get(|| async { "Okay!" }))
         .layer(cors_layer())
         .layer(tracing_layer())
@@ -44,9 +42,10 @@ async fn main() {
 
     let address = format!("{}:{}", config.server_host, config.server_port);
 
-    let listener = tokio::net::TcpListener::bind(&address).await.expect("Failed to bind the address");
+    let listener = tokio::net::TcpListener::bind(&address)
+        .await
+        .expect("Failed to bind the address");
 
-    // println!("Server running at http://{}", address);
     tracing::debug!("🚀 Server listening at http://{}", address);
     axum::serve(listener, app).await.unwrap();
 }
