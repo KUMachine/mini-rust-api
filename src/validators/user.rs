@@ -1,7 +1,8 @@
-use validator::Validate;
 use serde::Deserialize;
+use utoipa::ToSchema;
+use validator::Validate;
 
-#[derive(Debug, Deserialize, Validate)]
+#[derive(Debug, Deserialize, Validate, ToSchema)]
 pub struct CreateUserRequest {
     #[validate(length(min = 1, message = "First name is required"))]
     pub first_name: String,

@@ -1,5 +1,6 @@
-use serde::{Deserialize, Serialize};
 use crate::entity::users;
+use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 
 #[derive(Debug, Deserialize)]
 pub struct CreateUser {
@@ -8,7 +9,7 @@ pub struct CreateUser {
     pub age: i32,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct UserResponse {
     pub id: i32,
     pub first_name: String,
