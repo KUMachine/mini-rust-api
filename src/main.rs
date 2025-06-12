@@ -1,7 +1,6 @@
 mod config;
 mod db;
 mod docs;
-mod entity;
 mod errors;
 mod middleware;
 mod models;
@@ -35,7 +34,7 @@ async fn main() {
 
     let app = Router::new()
         .merge(routes::users::routes())
-        .route("/health", get(|| async { "Okay!" }))
+        .route("/health", get(routes::health::health_check))
         .merge(SwaggerUi::new("/api-docs").url("/api-docs/openapi.json", docs::ApiDoc::openapi()))
         .layer(cors_layer())
         .layer(tracing_layer())
