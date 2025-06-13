@@ -1,6 +1,7 @@
 mod config;
 mod db;
 mod docs;
+mod entity;
 mod errors;
 mod middleware;
 mod models;
