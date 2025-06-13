@@ -1,6 +1,6 @@
+use dotenvy::dotenv;
 use sea_orm::{Database, DbConn};
 use std::env;
-use dotenvy::dotenv;
 
 pub async fn connect() -> Result<DbConn, sea_orm::DbErr> {
     dotenv().ok();
