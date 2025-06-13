@@ -3,7 +3,11 @@ name = "zero2prod"
 version = "0.1.0"
 edition = "2024"
 
+[workspace]
+members = [".", "migration"]
+
 [dependencies]
+migration = {path = "migration"}
 axum = "0.8.4"
 tokio = { version = "1.45.1", features = ["full"] }
 sea-orm = { version = "1.1.0", features = ["sqlx-postgres", "runtime-tokio-native-tls", "macros"] }
@@ -18,3 +22,4 @@ validator = { version = "0.20.0", features = ["derive"] }
 utoipa = { version = "5.3.1", features = ["axum_extras", "debug"] }
 utoipa-swagger-ui = { version = "9.0.2", features = ["axum"] }
 utoipa-axum = { version = "0.2.0", features = ["debug"] }
+chrono = "0.4.41"

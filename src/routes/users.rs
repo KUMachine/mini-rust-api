@@ -1,6 +1,7 @@
 use crate::errors::{AppError, AppResult};
 use crate::models::user::UserResponse;
 use crate::response::ApiResponse;
+use chrono::Utc;
 
 use crate::AppState;
 use crate::entity::users;
@@ -55,6 +56,7 @@ pub async fn create_user(
         first_name: Set(payload.first_name),
         last_name: Set(payload.last_name),
         age: Set(payload.age),
+        create_at: Set(Utc::now().naive_utc().date()),
         ..Default::default()
     };
 
