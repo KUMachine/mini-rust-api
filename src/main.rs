@@ -5,6 +5,7 @@ mod entity;
 mod errors;
 mod middleware;
 mod models;
+mod pagination;
 mod response;
 mod routes;
 mod validators;

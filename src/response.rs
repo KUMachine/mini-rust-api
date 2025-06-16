@@ -4,6 +4,7 @@ use utoipa::ToSchema;
 #[derive(Serialize, ToSchema)]
 pub struct Meta {
     pub count: Option<u64>,
+    #[serde(rename = "rowsPerPage")]
     pub rows_per_page: Option<u32>,
     pub page: Option<u32>,
 }
