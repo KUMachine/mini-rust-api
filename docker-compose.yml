@@ -6,9 +6,9 @@ services:
     ports:
       - "4000:4000"
     environment:
-      - DATABASE_URL=${DATABASE_URL:-postgres://postgres:example@db:5432/zero2prod}
-      - SERVER_HOST=${SERVER_HOST:-0.0.0.0}
-      - SERVER_PORT=${SERVER_PORT:-4000}
+      - DATABASE_URL=postgres://postgres:example@db:5432/zero2prod
+      - SERVER_HOST=0.0.0.0
+      - SERVER_PORT=4000
     depends_on:
       - db
 
