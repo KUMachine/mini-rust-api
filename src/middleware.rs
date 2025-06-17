@@ -31,7 +31,7 @@ pub fn tracing_layer() {
         )
         .with(tracing_subscriber::fmt::layer())
         .init();
-    let tracing_layer_result = TraceLayer::new_for_http()
+    let _tracing_layer_result = TraceLayer::new_for_http()
         .make_span_with(|request: &Request<()>| {
             // Log the matched route's path (with placeholders not filled in).
             // Use request.uri() or OriginalUri if you want the real path.

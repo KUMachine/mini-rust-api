@@ -1,12 +1,11 @@
+use crate::response::ApiErrorResponse;
 use axum::{
+    Json,
     http::StatusCode,
     response::{IntoResponse, Response},
-    Json,
 };
-use serde::Serialize;
 use sea_orm::DbErr;
 use thiserror::Error;
-use crate::response::ApiErrorResponse;
 
 #[derive(Error, Debug)]
 pub enum AppError {
