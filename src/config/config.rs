@@ -10,7 +10,10 @@ impl Config {
         dotenvy::dotenv().ok();
         let database_url = dotenvy::var("DATABASE_URL").expect("DATABASE_URL must be set");
         let server_host = dotenvy::var("SERVER_HOST").expect("SERVER_HOST must be set");
-        let server_port = dotenvy::var("SERVER_PORT").unwrap().parse().expect("SERVER_PORT must be set");
+        let server_port = dotenvy::var("SERVER_PORT")
+            .unwrap()
+            .parse()
+            .expect("SERVER_PORT must be set");
 
         Self {
             database_url,
