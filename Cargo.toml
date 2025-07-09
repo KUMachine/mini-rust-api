@@ -6,6 +6,14 @@ edition = "2024"
 [workspace]
 members = [".", "migration"]
 
+[[bin]]
+name = "zero2prod"
+path = "src/main.rs"
+
+[lib]
+name = "zero2prod"
+path = "src/lib.rs"
+
 [dependencies]
 migration = {path = "migration"}
 axum = "0.8.4"
