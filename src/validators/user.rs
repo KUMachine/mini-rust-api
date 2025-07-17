@@ -3,8 +3,9 @@ use utoipa::ToSchema;
 use validator::Validate;
 
 #[derive(Debug, Deserialize, Validate, ToSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct CreateUserRequest {
-    #[validate(length(min = 1, message = "First name is required"))]
+    #[validate(length(min = 1, message = "First name is required",))]
     pub first_name: String,
 
     #[validate(length(min = 1, message = "Last name is required"))]
