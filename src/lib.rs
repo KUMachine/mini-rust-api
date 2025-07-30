@@ -1,3 +1,4 @@
+pub mod auth;
 pub mod config;
 pub mod db;
 pub mod docs;
@@ -11,6 +12,7 @@ pub mod routes;
 pub mod validators;
 
 // Re-export commonly used items for convenience
+pub use auth::{Claims, auth_middleware, auth_routes};
 pub use config::Config;
 pub use db::connection;
 pub use errors::AppError;

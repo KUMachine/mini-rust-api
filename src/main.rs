@@ -1,9 +1,9 @@
-use axum::{Router, routing::get};
+use axum::{Router, middleware, routing::get};
 use std::sync::Arc;
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 use zero2prod::{
-    AppState,
+    AppState, auth_middleware, auth_routes,
     config::Config,
     docs,
     middleware::{cors_layer, tracing_layer},
@@ -22,9 +22,17 @@ async fn main() {
     let state = AppState { db };
 
     let app = Router::new()
-        .merge(routes::users::routes())
+        // Public routes (no authentication required)
+        .merge(auth_routes())
         .route("/health", get(routes::health::health_check))
         .merge(SwaggerUi::new("/api-docs").url("/api-docs/openapi.json", docs::ApiDoc::openapi()))
+        // Protected routes (authentication required)
+        .merge(
+            routes::users::routes().route_layer(middleware::from_fn_with_state(
+                state.clone(),
+                auth_middleware,
+            )),
+        )
         .layer(cors_layer())
         .layer(tracing_layer())
         .with_state(state);

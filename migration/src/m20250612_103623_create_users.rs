@@ -15,6 +15,8 @@ impl MigrationTrait for Migration {
                     .col(string(Users::FirstName))
                     .col(string(Users::LastName))
                     .col(integer(Users::Age))
+                    .col(string_uniq(Users::Email))
+                    .col(string(Users::PasswordHash))
                     .col(date(Users::CreateAt))
                     .to_owned(),
             )
@@ -35,5 +37,7 @@ enum Users {
     FirstName,
     LastName,
     Age,
+    Email,
+    PasswordHash,
     CreateAt,
 }

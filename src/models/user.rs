@@ -9,6 +9,7 @@ pub struct UserResponse {
     pub first_name: String,
     pub last_name: String,
     pub age: i32,
+    pub email: String,
     #[schema(format = "date-time")]
     pub created_at: String,
 }
@@ -20,6 +21,7 @@ impl From<users::Model> for UserResponse {
             first_name: user.first_name,
             last_name: user.last_name,
             age: user.age,
+            email: user.email,
             created_at: user.create_at.to_string(),
         }
     }

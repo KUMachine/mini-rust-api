@@ -10,6 +10,9 @@ pub struct Model {
     pub first_name: String,
     pub last_name: String,
     pub age: i32,
+    #[sea_orm(unique)]
+    pub email: String,
+    pub password_hash: String,
     pub create_at: Date,
 }
 
