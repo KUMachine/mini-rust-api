@@ -8,6 +8,7 @@ use utoipa::OpenApi;
     paths(
         crate::routes::users::list_users,
         crate::routes::users::create_user,
+        crate::routes::users::get_user,
         crate::routes::health::health_check,
         crate::auth::handlers::login,
         crate::auth::handlers::register

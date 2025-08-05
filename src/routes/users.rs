@@ -11,14 +11,16 @@ use crate::entity::users::Entity as Users;
 use crate::validators::user::CreateUserRequest;
 use axum::{
     Json, Router,
-    extract::{Query, State},
+    extract::{Path, Query, State},
     routing::get,
 };
 use sea_orm::{ActiveModelTrait, EntityTrait, PaginatorTrait, QueryOrder, QuerySelect, Set};
 use validator::Validate;
 
 pub fn routes() -> Router<AppState> {
-    Router::new().route("/users", get(list_users).post(create_user))
+    Router::new()
+        .route("/users", get(list_users).post(create_user))
+        .route("/users/{id}", get(get_user))
 }
 
 /// List all users
@@ -61,6 +63,35 @@ pub async fn list_users(
         rows_per_page,
         page,
     )))
+}
+
+/// Get a user by ID
+#[utoipa::path(
+    get,
+    path = "/users/{id}",
+    params(
+        ("id" = i32, Path, description = "User ID")
+    ),
+    responses(
+        (status = 200, description = "User found", body = ApiResponse<UserResponse>),
+        (status = 404, description = "User not found"),
+        (status = 401, description = "Unauthorized - Valid JWT token required")
+    ),
+    security(
+        ("bearer_auth" = [])
+    ),
+    tag = "users"
+)]
+pub async fn get_user(
+    State(state): State<AppState>,
+    Path(id): Path<i32>,
+) -> AppResult<Json<ApiResponse<UserResponse>>> {
+    let user = Users::find_by_id(id)
+        .one(&*state.db)
+        .await?
+        .ok_or(AppError::NotFound)?;
+
+    Ok(Json(ApiResponse::ok(UserResponse::from(user))))
 }
 
 /// Create a new user
