@@ -1,7 +1,7 @@
 use crate::errors::{AppError, AppResult};
 use crate::models::user::UserResponse;
 use crate::pagination::PaginationRequest;
-use crate::response::ApiResponse;
+use crate::response::{ApiErrorResponse, ApiResponse};
 use bcrypt::{DEFAULT_COST, hash};
 use chrono::Utc;
 
@@ -101,7 +101,7 @@ pub async fn get_user(
     request_body = CreateUserRequest,
     responses(
         (status = 200, description = "User created successfully", body = ApiResponse<UserResponse>),
-        (status = 422, description = "Validation error"),
+        (status = 422, description = "Validation error", body = ApiErrorResponse),
         (status = 401, description = "Unauthorized - Valid JWT token required")
     ),
     security(
@@ -113,9 +113,22 @@ pub async fn create_user(
     State(state): State<AppState>,
     Json(payload): Json<CreateUserRequest>,
 ) -> AppResult<Json<ApiResponse<UserResponse>>> {
-    payload
-        .validate()
-        .map_err(|e| AppError::ValidationError(e.to_string()))?;
+    payload.validate().map_err(|e| {
+        let error_messages: Vec<String> = e
+            .field_errors()
+            .into_iter()
+            .flat_map(|(_, errors)| {
+                errors.into_iter().map(|error| {
+                    error
+                        .message
+                        .as_ref()
+                        .map(|msg| msg.to_string())
+                        .unwrap_or_else(|| "Invalid value".to_string())
+                })
+            })
+            .collect();
+        AppError::ValidationError(error_messages)
+    })?;
 
     // Hash password
     let password_hash = hash(&payload.password, DEFAULT_COST)

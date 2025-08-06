@@ -19,10 +19,10 @@ where
     pub data: T,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, ToSchema)]
 pub struct ApiErrorResponse {
     pub success: bool,
-    pub error: String,
+    pub errors: Vec<String>,
 }
 
 impl<T: Serialize> ApiResponse<T> {
@@ -43,10 +43,10 @@ impl<T: Serialize> ApiResponse<T> {
 }
 
 impl ApiErrorResponse {
-    pub fn error<E: ToString>(message: E) -> Self {
+    pub fn new(errors: Vec<String>) -> Self {
         Self {
             success: false,
-            error: message.to_string(),
+            errors,
         }
     }
 }

@@ -16,8 +16,8 @@ pub enum AppError {
     #[error("Authentication error: {0}")]
     AuthError(#[from] AuthError),
 
-    #[error("Validation error: {0}")]
-    ValidationError(String),
+    #[error("Validation error")]
+    ValidationError(Vec<String>),
 
     #[error("Not found")]
     NotFound,
@@ -28,27 +28,37 @@ pub enum AppError {
 
 impl IntoResponse for AppError {
     fn into_response(self) -> Response {
-        let (status, message) = match &self {
-            AppError::DatabaseError(_) => (StatusCode::INTERNAL_SERVER_ERROR, self.to_string()),
-            AppError::AuthError(auth_err) => match auth_err {
-                AuthError::WrongCredentials => {
-                    (StatusCode::UNAUTHORIZED, "Invalid credentials".to_string())
-                }
-                AuthError::MissingCredentials => {
-                    (StatusCode::BAD_REQUEST, "Missing credentials".to_string())
-                }
-                AuthError::TokenCreation => (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    "Token creation failed".to_string(),
-                ),
-                AuthError::InvalidToken => (StatusCode::UNAUTHORIZED, "Invalid token".to_string()),
-            },
-            AppError::ValidationError(_) => (StatusCode::UNPROCESSABLE_ENTITY, self.to_string()),
-            AppError::NotFound => (StatusCode::NOT_FOUND, self.to_string()),
-            AppError::Unexpected(_) => (StatusCode::INTERNAL_SERVER_ERROR, self.to_string()),
+        let (status, errors) = match self {
+            AppError::DatabaseError(err) => {
+                (StatusCode::INTERNAL_SERVER_ERROR, vec![err.to_string()])
+            }
+            AppError::AuthError(auth_err) => {
+                let message = match auth_err {
+                    AuthError::WrongCredentials => "Invalid credentials",
+                    AuthError::MissingCredentials => "Missing credentials",
+                    AuthError::TokenCreation => "Token creation failed",
+                    AuthError::InvalidToken => "Invalid token",
+                };
+                (
+                    match auth_err {
+                        AuthError::WrongCredentials | AuthError::InvalidToken => {
+                            StatusCode::UNAUTHORIZED
+                        }
+                        AuthError::MissingCredentials => StatusCode::BAD_REQUEST,
+                        AuthError::TokenCreation => StatusCode::INTERNAL_SERVER_ERROR,
+                    },
+                    vec![message.to_string()],
+                )
+            }
+            AppError::ValidationError(errors) => (StatusCode::UNPROCESSABLE_ENTITY, errors),
+            AppError::NotFound => (StatusCode::NOT_FOUND, vec!["Not found".to_string()]),
+            AppError::Unexpected(err) => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                vec![format!("Unexpected error: {}", err)],
+            ),
         };
 
-        let body = Json(ApiErrorResponse::error(message));
+        let body = Json(ApiErrorResponse::new(errors));
         (status, body).into_response()
     }
 }

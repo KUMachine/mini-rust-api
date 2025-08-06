@@ -30,7 +30,7 @@ pub async fn login(
 ) -> AppResult<Json<ApiResponse<AuthBody>>> {
     payload
         .validate()
-        .map_err(|e| AppError::ValidationError(e.to_string()))?;
+        .map_err(|e| AppError::ValidationError(vec![e.to_string()]))?;
 
     // Find user by email
     let user = Users::find()
@@ -68,7 +68,7 @@ pub async fn register(
 ) -> AppResult<Json<ApiResponse<UserResponse>>> {
     payload
         .validate()
-        .map_err(|e| AppError::ValidationError(e.to_string()))?;
+        .map_err(|e| AppError::ValidationError(vec![e.to_string()]))?;
 
     // Check if user already exists
     if Users::find()
@@ -77,9 +77,9 @@ pub async fn register(
         .await?
         .is_some()
     {
-        return Err(AppError::ValidationError(
+        return Err(AppError::ValidationError(vec![
             "User with this email already exists".to_string(),
-        ));
+        ]));
     }
 
     // Hash password
