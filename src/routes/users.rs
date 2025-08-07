@@ -1,4 +1,5 @@
 use crate::errors::{AppError, AppResult};
+use crate::extractors::ValidatedJson;
 use crate::models::user::UserResponse;
 use crate::pagination::PaginationRequest;
 use crate::response::{ApiErrorResponse, ApiResponse};
@@ -111,7 +112,7 @@ pub async fn get_user(
 )]
 pub async fn create_user(
     State(state): State<AppState>,
-    Json(payload): Json<CreateUserRequest>,
+    ValidatedJson(payload): ValidatedJson<CreateUserRequest>,
 ) -> AppResult<Json<ApiResponse<UserResponse>>> {
     payload.validate().map_err(|e| {
         let error_messages: Vec<String> = e

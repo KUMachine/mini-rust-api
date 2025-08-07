@@ -4,6 +4,7 @@ pub mod db;
 pub mod docs;
 pub mod entity;
 pub mod errors;
+pub mod extractors;
 pub mod middleware;
 pub mod models;
 pub mod pagination;
