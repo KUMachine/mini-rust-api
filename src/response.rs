@@ -21,7 +21,6 @@ where
 
 #[derive(Serialize, ToSchema)]
 pub struct ApiErrorResponse {
-    pub success: bool,
     pub errors: Vec<String>,
 }
 
@@ -44,9 +43,6 @@ impl<T: Serialize> ApiResponse<T> {
 
 impl ApiErrorResponse {
     pub fn new(errors: Vec<String>) -> Self {
-        Self {
-            success: false,
-            errors,
-        }
+        Self { errors }
     }
 }
