@@ -1,11 +1,11 @@
 use axum::{Json, Router, extract::State, routing::post};
 use chrono::Utc;
 use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, QueryFilter, Set};
-use validator::Validate;
 
 use crate::AppState;
 use crate::entity::users::{self, Entity as Users};
 use crate::errors::{AppError, AppResult};
+use crate::extractors::ValidatedJson;
 use crate::models::user::UserResponse;
 use crate::response::ApiResponse;
 use crate::validators::user::{LoginRequest, RegisterRequest};
@@ -20,18 +20,14 @@ use super::types::{AuthBody, AuthError};
     responses(
         (status = 200, description = "Login successful", body = ApiResponse<AuthBody>),
         (status = 401, description = "Invalid credentials"),
-        (status = 400, description = "Invalid input")
+        (status = 422, description = "Validation error")
     ),
     tag = "auth"
 )]
 pub async fn login(
     State(state): State<AppState>,
-    Json(payload): Json<LoginRequest>,
+    ValidatedJson(payload): ValidatedJson<LoginRequest>,
 ) -> AppResult<Json<ApiResponse<AuthBody>>> {
-    payload
-        .validate()
-        .map_err(|e| AppError::ValidationError(vec![e.to_string()]))?;
-
     // Find user by email
     let user = Users::find()
         .filter(users::Column::Email.eq(&payload.email))
@@ -64,12 +60,8 @@ pub async fn login(
 )]
 pub async fn register(
     State(state): State<AppState>,
-    Json(payload): Json<RegisterRequest>,
+    ValidatedJson(payload): ValidatedJson<RegisterRequest>,
 ) -> AppResult<Json<ApiResponse<UserResponse>>> {
-    payload
-        .validate()
-        .map_err(|e| AppError::ValidationError(vec![e.to_string()]))?;
-
     // Check if user already exists
     if Users::find()
         .filter(users::Column::Email.eq(&payload.email))
