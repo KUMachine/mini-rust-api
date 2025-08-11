@@ -1,8 +1,8 @@
-use sea_orm::{Database, DbConn};
+use sea_orm::{Database, DbConn, DbErr};
 
 use crate::config::Config;
 
-pub async fn connect() -> Result<DbConn, sea_orm::DbErr> {
+pub async fn connect() -> Result<DbConn, DbErr> {
     let config = Config::from_env();
     Database::connect(&config.database_url).await
 }
