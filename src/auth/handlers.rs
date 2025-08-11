@@ -35,7 +35,7 @@ pub async fn login(
     // Find user by email
     let user = Users::find()
         .filter(users::Column::Email.eq(&payload.email))
-        .one(&*state.db)
+        .one(state.db.as_ref())
         .await?
         .ok_or(AuthError::WrongCredentials)?;
 
@@ -73,7 +73,7 @@ pub async fn register(
     // Check if user already exists
     if Users::find()
         .filter(users::Column::Email.eq(&payload.email))
-        .one(&*state.db)
+        .one(state.db.as_ref())
         .await?
         .is_some()
     {
@@ -96,7 +96,7 @@ pub async fn register(
         ..Default::default()
     };
 
-    let user = new_user.insert(&*state.db).await?;
+    let user = new_user.insert(state.db.as_ref()).await?;
     Ok(Json(ApiResponse::ok(UserResponse::from(user))))
 }
 

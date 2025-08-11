@@ -53,10 +53,10 @@ pub async fn list_users(
         .order_by_desc(users::Column::Id)
         .offset(offset)
         .limit(rows_per_page as u64)
-        .all(&*state.db)
+        .all(state.db.as_ref())
         .await?;
 
-    let total = Users::find().count(&*state.db).await?;
+    let total = Users::find().count(state.db.as_ref()).await?;
 
     Ok(Json(ApiResponse::with_pagination(
         users.into_iter().map(UserResponse::from).collect(),
@@ -88,7 +88,7 @@ pub async fn get_user(
     Path(id): Path<i32>,
 ) -> AppResult<Json<ApiResponse<UserResponse>>> {
     let user = Users::find_by_id(id)
-        .one(&*state.db)
+        .one(state.db.as_ref())
         .await?
         .ok_or(AppError::NotFound)?;
 
@@ -145,6 +145,6 @@ pub async fn create_user(
         ..Default::default()
     };
 
-    let inserted = new_user.insert(&*state.db).await?;
+    let inserted = new_user.insert(state.db.as_ref()).await?;
     Ok(Json(ApiResponse::ok(UserResponse::from(inserted))))
 }
