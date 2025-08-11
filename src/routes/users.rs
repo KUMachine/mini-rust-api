@@ -1,9 +1,9 @@
+use crate::auth::hash_password;
 use crate::errors::{AppError, AppResult};
 use crate::extractors::ValidatedJson;
 use crate::models::user::UserResponse;
 use crate::pagination::PaginationRequest;
 use crate::response::{ApiErrorResponse, ApiResponse};
-use bcrypt::{DEFAULT_COST, hash};
 use chrono::Utc;
 
 use crate::AppState;
@@ -132,8 +132,7 @@ pub async fn create_user(
     })?;
 
     // Hash password
-    let password_hash = hash(&payload.password, DEFAULT_COST)
-        .map_err(|_| AppError::Unexpected("Failed to hash password".to_string()))?;
+    let password_hash = hash_password(&payload.password)?;
 
     let new_user = users::ActiveModel {
         first_name: Set(payload.first_name),
