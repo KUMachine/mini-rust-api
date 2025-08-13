@@ -1,10 +1,11 @@
 use axum::{
     RequestPartsExt,
-    extract::{FromRequestParts, Request, State},
+    extract::{Request, State},
     http::{StatusCode, request::Parts},
     middleware::Next,
     response::Response,
 };
+use axum_core::extract::FromRequestParts;
 use axum_extra::{
     TypedHeader,
     headers::{Authorization, authorization::Bearer},

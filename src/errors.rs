@@ -1,10 +1,7 @@
 use crate::auth::AuthError;
 use crate::response::ApiErrorResponse;
-use axum::{
-    Json,
-    http::StatusCode,
-    response::{IntoResponse, Response},
-};
+use axum::{Json, http::StatusCode, response::Response};
+use axum_core::response::IntoResponse;
 use sea_orm::DbErr;
 use thiserror::Error;
 
