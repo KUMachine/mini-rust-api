@@ -16,7 +16,7 @@ path = "src/lib.rs"
 
 [dependencies]
 migration = {path = "migration"}
-axum = "0.8.4"
+axum = { version = "0.8.4", features = ["macros"] }
 axum-extra = { version = "0.10.1", features = ["typed-header"]}
 tokio = { version = "1.45.1", features = ["full"] }
 sea-orm = { version = "1.1.0", features = ["sqlx-postgres", "runtime-tokio-native-tls", "macros"] }
