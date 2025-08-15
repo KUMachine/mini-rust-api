@@ -117,9 +117,9 @@ pub async fn create_user(
     payload.validate().map_err(|e| {
         let error_messages: Vec<String> = e
             .field_errors()
-            .into_iter()
+            .iter()
             .flat_map(|(_, errors)| {
-                errors.into_iter().map(|error| {
+                errors.iter().map(|error| {
                     error
                         .message
                         .as_ref()

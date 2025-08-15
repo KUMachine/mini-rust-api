@@ -12,6 +12,8 @@ use zero2prod::{
 
 #[tokio::main]
 async fn main() {
+    tracing_layer();
+
     let config = Config::from_env();
     let db = Arc::new(
         zero2prod::config::database::connect()
@@ -34,7 +36,6 @@ async fn main() {
             )),
         )
         .layer(cors_layer())
-        .layer(tracing_layer())
         .with_state(state);
 
     let address = format!("{}:{}", config.server_host, config.server_port);
