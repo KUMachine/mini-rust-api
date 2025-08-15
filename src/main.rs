@@ -14,7 +14,7 @@ use zero2prod::{
 async fn main() {
     let config = Config::from_env();
     let db = Arc::new(
-        zero2prod::db::connection::connect()
+        zero2prod::config::database::connect()
             .await
             .expect("Failed to connect to database"),
     );

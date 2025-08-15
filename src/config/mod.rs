@@ -1,2 +1,4 @@
-pub mod config;
-pub use config::Config;
+pub mod database;
+pub mod env;
+
+pub use env::Config;
