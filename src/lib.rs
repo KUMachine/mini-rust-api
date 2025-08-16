@@ -16,7 +16,7 @@ pub use auth::{Claims, auth_middleware, auth_routes};
 pub use config::Config;
 pub use config::database;
 pub use errors::AppError;
-pub use middleware::{cors_layer, tracing_layer};
+pub use middleware::{cors::cors_layer, tracing::tracing_layer};
 pub use models::user::UserResponse;
 pub use response::ApiResponse;
 

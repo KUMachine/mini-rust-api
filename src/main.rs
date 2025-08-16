@@ -6,7 +6,7 @@ use zero2prod::{
     AppState, auth_middleware, auth_routes,
     config::Config,
     docs,
-    middleware::{cors_layer, tracing_layer},
+    middleware::{cors::cors_layer, tracing::tracing_layer},
     routes,
 };
 

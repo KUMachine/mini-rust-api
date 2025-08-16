@@ -1,20 +1,10 @@
-use crate::config::Config;
 use axum::body::Bytes;
 use axum::extract::MatchedPath;
-use axum::http::{HeaderMap, HeaderValue, Method, Request, Response};
+use axum::http::{HeaderMap, Request, Response};
 use std::time::Duration;
-use tower_http::cors::CorsLayer;
 use tower_http::{classify::ServerErrorsFailureClass, trace::TraceLayer};
 use tracing::{Span, info_span};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
-
-pub fn cors_layer() -> CorsLayer {
-    let config: Config = Config::from_env();
-    let address = format!("{}:{}", config.server_host, config.server_port);
-    CorsLayer::new()
-        .allow_origin(address.parse::<HeaderValue>().unwrap())
-        .allow_methods([Method::GET])
-}
 
 pub fn tracing_layer() {
     tracing_subscriber::registry()
