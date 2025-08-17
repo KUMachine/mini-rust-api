@@ -1,6 +1,7 @@
+use crate::pagination::PaginationRequest;
 use crate::response::ApiErrorResponse;
 use axum::{
-    extract::{Json, Request, rejection::JsonRejection},
+    extract::{Query, Request, rejection::QueryRejection},
     http::StatusCode,
     response::Response,
 };
@@ -9,23 +10,23 @@ use axum_core::response::IntoResponse;
 use serde::de::DeserializeOwned;
 use validator::Validate;
 
-pub struct ValidatedJson<T>(pub T);
+pub struct ValidatedPagination<T>(pub T);
 
-pub struct ValidationRejection(Vec<String>);
+pub struct PaginationValidationRejection(Vec<String>);
 
-impl IntoResponse for ValidationRejection {
+impl IntoResponse for PaginationValidationRejection {
     fn into_response(self) -> Response {
-        let body = Json(ApiErrorResponse::new(self.0));
-        (StatusCode::UNPROCESSABLE_ENTITY, body).into_response()
+        let body = axum::Json(ApiErrorResponse::new(self.0));
+        (StatusCode::BAD_REQUEST, body).into_response()
     }
 }
 
-fn json_rejection_to_response(rejection: JsonRejection) -> Response {
-    let body = Json(ApiErrorResponse::new(vec![rejection.to_string()]));
+fn query_rejection_to_response(rejection: QueryRejection) -> Response {
+    let body = axum::Json(ApiErrorResponse::new(vec![rejection.to_string()]));
     (rejection.status(), body).into_response()
 }
 
-impl<S, T> FromRequest<S> for ValidatedJson<T>
+impl<S, T> FromRequest<S> for ValidatedPagination<T>
 where
     S: Send + Sync,
     T: DeserializeOwned + Validate,
@@ -33,8 +34,8 @@ where
     type Rejection = Response;
 
     async fn from_request(req: Request, state: &S) -> Result<Self, Self::Rejection> {
-        match Json::<T>::from_request(req, state).await {
-            Ok(Json(value)) => {
+        match Query::<T>::from_request(req, state).await {
+            Ok(Query(value)) => {
                 if let Err(errors) = value.validate() {
                     let error_messages: Vec<String> = errors
                         .field_errors()
@@ -50,11 +51,14 @@ where
                             })
                         })
                         .collect();
-                    return Err(ValidationRejection(error_messages).into_response());
+                    return Err(PaginationValidationRejection(error_messages).into_response());
                 }
-                Ok(ValidatedJson(value))
+                Ok(ValidatedPagination(value))
             }
-            Err(rejection) => Err(json_rejection_to_response(rejection)),
+            Err(rejection) => Err(query_rejection_to_response(rejection)),
         }
     }
 }
+
+// Type alias for pagination query specifically
+pub type PaginationQuery = ValidatedPagination<PaginationRequest>;

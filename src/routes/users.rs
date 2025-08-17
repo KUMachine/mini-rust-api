@@ -1,6 +1,6 @@
 use crate::auth::hash_password;
 use crate::errors::{AppError, AppResult};
-use crate::extractors::ValidatedJson;
+use crate::extractors::{ValidatedJson, ValidatedPagination};
 use crate::models::user::UserResponse;
 use crate::pagination::PaginationRequest;
 use crate::response::{ApiErrorResponse, ApiResponse};
@@ -12,7 +12,7 @@ use crate::entity::users::Entity as Users;
 use crate::validators::user::CreateUserRequest;
 use axum::{
     Json, Router,
-    extract::{Path, Query, State},
+    extract::{Path, State},
     routing::get,
 };
 use sea_orm::{ActiveModelTrait, EntityTrait, PaginatorTrait, QueryOrder, QuerySelect, Set};
@@ -43,7 +43,7 @@ pub fn routes() -> Router<AppState> {
 )]
 pub async fn list_users(
     State(state): State<AppState>,
-    Query(pagination): Query<PaginationRequest>,
+    ValidatedPagination(pagination): ValidatedPagination<PaginationRequest>,
 ) -> AppResult<Json<ApiResponse<Vec<UserResponse>>>> {
     let page = pagination.page;
     let rows_per_page = pagination.rows_per_page;
