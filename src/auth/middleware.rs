@@ -36,7 +36,7 @@ pub async fn auth_middleware(
 
 // Helper function to get claims from request extensions
 pub fn get_claims_from_request(req: &Request) -> Option<&Claims> {
-    req.extensions().get::<Claims>()
+    req.extensions().get()
 }
 
 impl<S> FromRequestParts<S> for Claims
