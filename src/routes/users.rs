@@ -9,7 +9,7 @@ use chrono::Utc;
 use crate::AppState;
 use crate::entity::users;
 use crate::entity::users::Entity as Users;
-use crate::validators::user::CreateUserRequest;
+use crate::validators::user::{CreateUserRequest, UpdateUserRequest};
 use axum::{
     Json, Router,
     extract::{Path, State},
@@ -21,7 +21,7 @@ use validator::Validate;
 pub fn routes() -> Router<AppState> {
     Router::new()
         .route("/users", get(list_users).post(create_user))
-        .route("/users/{id}", get(get_user))
+        .route("/users/{id}", get(get_user).put(update_user))
 }
 
 /// List all users
@@ -146,4 +146,40 @@ pub async fn create_user(
 
     let inserted = new_user.insert(state.db.as_ref()).await?;
     Ok(Json(ApiResponse::ok(UserResponse::from(inserted))))
+}
+
+/// Update a user
+#[utoipa::path(
+    put,
+    path = "/users/{id}",
+    request_body = CreateUserRequest,
+    responses(
+        (status = 200, description = "User updated successfully", body = ApiResponse<UserResponse>),
+        (status = 422, description = "Validation error", body = ApiErrorResponse),
+        (status = 401, description = "Unauthorized - Valid JWT token required")
+    ),
+    security(
+        ("bearer_auth" = [])
+    ),
+    tag = "users"
+)]
+pub async fn update_user(
+    State(state): State<AppState>,
+    Path(id): Path<i32>,
+    ValidatedJson(payload): ValidatedJson<UpdateUserRequest>,
+) -> AppResult<Json<ApiResponse<UserResponse>>> {
+    let user = Users::find_by_id(id)
+        .one(state.db.as_ref())
+        .await?
+        .ok_or(AppError::NotFound)?;
+    let mut user: users::ActiveModel = user.into();
+
+    user.first_name = Set(payload.first_name);
+    user.last_name = Set(payload.last_name);
+    user.age = Set(payload.age);
+    user.email = Set(payload.email);
+
+    let updated_user = user.update(state.db.as_ref()).await?;
+
+    Ok(Json(ApiResponse::ok(UserResponse::from(updated_user))))
 }
