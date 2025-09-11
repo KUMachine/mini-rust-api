@@ -23,6 +23,22 @@ pub struct CreateUserRequest {
 
 #[derive(Debug, Deserialize, Validate, ToSchema)]
 #[serde(rename_all = "camelCase")]
+pub struct UpdateUserRequest {
+    #[validate(length(min = 1, message = "First name is required"))]
+    pub first_name: String,
+
+    #[validate(length(min = 1, message = "Last name is required"))]
+    pub last_name: String,
+
+    #[validate(range(min = 0, message = "Age must be non-negative"))]
+    pub age: i32,
+
+    #[validate(email(message = "Invalid email format"))]
+    pub email: String,
+}
+
+#[derive(Debug, Deserialize, Validate, ToSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct LoginRequest {
     #[validate(email(message = "Invalid email format"))]
     pub email: String,
