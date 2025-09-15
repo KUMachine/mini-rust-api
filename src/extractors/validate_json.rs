@@ -1,4 +1,4 @@
-use crate::response::ApiErrorResponse;
+use crate::response::{ApiErrorResponse, JsonApiError};
 use axum::{
     extract::{Json, Request, rejection::JsonRejection},
     http::StatusCode,
@@ -15,38 +15,57 @@ pub struct ValidationRejection(Vec<String>);
 
 impl IntoResponse for ValidationRejection {
     fn into_response(self) -> Response {
-        let body = Json(ApiErrorResponse::new(self.0));
+        let errors: Vec<JsonApiError> = self
+            .0
+            .into_iter()
+            .map(|err| {
+                JsonApiError::new(422, "VALIDATION_ERROR", "Validation Failed").with_detail(err)
+            })
+            .collect();
+        let body = Json(ApiErrorResponse::new(errors));
         (StatusCode::UNPROCESSABLE_ENTITY, body).into_response()
     }
 }
 
 fn json_rejection_to_response(rejection: JsonRejection) -> Response {
     match rejection {
-        JsonRejection::JsonDataError(_) => {
-            let error_message = "Failed to deserialize JSON into the expected format".to_string();
-            let body = Json(ApiErrorResponse::new(vec![error_message]));
+        JsonRejection::JsonDataError(error) => {
+            let error = JsonApiError::new(422, "JSON_DATA_ERROR", "JSON Deserialization Failed")
+                .with_detail(error.to_string());
+            let body = Json(ApiErrorResponse::from_single_error(error));
             (StatusCode::UNPROCESSABLE_ENTITY, body).into_response()
         }
         JsonRejection::JsonSyntaxError(_) => {
-            let error_message = "Invalid JSON syntax in request body".to_string();
-            let body = Json(ApiErrorResponse::new(vec![error_message]));
+            let error = JsonApiError::new(400, "JSON_SYNTAX_ERROR", "Invalid JSON Syntax")
+                .with_detail("Invalid JSON syntax in request body");
+            let body = Json(ApiErrorResponse::from_single_error(error));
             (StatusCode::BAD_REQUEST, body).into_response()
         }
         JsonRejection::MissingJsonContentType(_) => {
-            let error_message =
-                "Missing or invalid Content-Type header. Expected 'application/json'".to_string();
-            let body = Json(ApiErrorResponse::new(vec![error_message]));
+            let error =
+                JsonApiError::new(415, "MISSING_CONTENT_TYPE", "Missing Content-Type Header")
+                    .with_detail(
+                        "Missing or invalid Content-Type header. Expected 'application/json'",
+                    )
+                    .with_source_parameter("Content-Type");
+            let body = Json(ApiErrorResponse::from_single_error(error));
             (StatusCode::UNSUPPORTED_MEDIA_TYPE, body).into_response()
         }
         JsonRejection::BytesRejection(_) => {
-            let error_message = "Failed to read request body".to_string();
-            let body = Json(ApiErrorResponse::new(vec![error_message]));
+            let error = JsonApiError::new(400, "REQUEST_BODY_ERROR", "Request Body Error")
+                .with_detail("Failed to read request body");
+            let body = Json(ApiErrorResponse::from_single_error(error));
             (StatusCode::BAD_REQUEST, body).into_response()
         }
         _ => {
             // Fallback for any future variants
-            let error_message = "JSON processing error".to_string();
-            let body = Json(ApiErrorResponse::new(vec![error_message]));
+            let error = JsonApiError::new(
+                rejection.status().as_u16(),
+                "JSON_PROCESSING_ERROR",
+                "JSON Processing Error",
+            )
+            .with_detail("An error occurred while processing JSON data");
+            let body = Json(ApiErrorResponse::from_single_error(error));
             (rejection.status(), body).into_response()
         }
     }

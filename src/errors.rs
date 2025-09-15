@@ -1,5 +1,5 @@
 use crate::auth::AuthError;
-use crate::response::ApiErrorResponse;
+use crate::response::{ApiErrorResponse, JsonApiError};
 use axum::{Json, http::StatusCode, response::Response};
 use axum_core::response::IntoResponse;
 use sea_orm::DbErr;
@@ -25,37 +25,78 @@ pub enum AppError {
 
 impl IntoResponse for AppError {
     fn into_response(self) -> Response {
-        let (status, errors) = match self {
+        let (status, api_error) = match self {
             AppError::DatabaseError(err) => {
-                (StatusCode::INTERNAL_SERVER_ERROR, vec![err.to_string()])
-            }
-            AppError::AuthError(auth_err) => {
-                let message = match auth_err {
-                    AuthError::WrongCredentials => "Invalid credentials",
-                    AuthError::MissingCredentials => "Missing credentials",
-                    AuthError::TokenCreation => "Token creation failed",
-                    AuthError::InvalidToken => "Invalid token",
-                };
+                let error = JsonApiError::new(500, "DATABASE_ERROR", "Database Error")
+                    .with_detail(format!("A database error occurred: {}", err));
                 (
-                    match auth_err {
-                        AuthError::WrongCredentials | AuthError::InvalidToken => {
-                            StatusCode::UNAUTHORIZED
-                        }
-                        AuthError::MissingCredentials => StatusCode::BAD_REQUEST,
-                        AuthError::TokenCreation => StatusCode::INTERNAL_SERVER_ERROR,
-                    },
-                    vec![message.to_string()],
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    ApiErrorResponse::from_single_error(error),
                 )
             }
-            AppError::ValidationError(errors) => (StatusCode::UNPROCESSABLE_ENTITY, errors),
-            AppError::NotFound => (StatusCode::NOT_FOUND, vec!["Not found".to_string()]),
-            AppError::Unexpected(err) => (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                vec![format!("Unexpected error: {}", err)],
-            ),
+            AppError::AuthError(auth_err) => {
+                let (status_code, code, title, detail) = match auth_err {
+                    AuthError::WrongCredentials => (
+                        StatusCode::UNAUTHORIZED,
+                        "WRONG_CREDENTIALS",
+                        "Invalid Credentials",
+                        "The provided credentials are incorrect",
+                    ),
+                    AuthError::MissingCredentials => (
+                        StatusCode::BAD_REQUEST,
+                        "MISSING_CREDENTIALS",
+                        "Missing Credentials",
+                        "Authentication credentials are required",
+                    ),
+                    AuthError::TokenCreation => (
+                        StatusCode::INTERNAL_SERVER_ERROR,
+                        "TOKEN_CREATION_FAILED",
+                        "Token Creation Failed",
+                        "Failed to create authentication token",
+                    ),
+                    AuthError::InvalidToken => (
+                        StatusCode::UNAUTHORIZED,
+                        "INVALID_TOKEN",
+                        "Invalid Token",
+                        "The provided authentication token is invalid",
+                    ),
+                };
+                let error =
+                    JsonApiError::new(status_code.as_u16(), code, title).with_detail(detail);
+                (status_code, ApiErrorResponse::from_single_error(error))
+            }
+            AppError::ValidationError(validation_errors) => {
+                let errors: Vec<JsonApiError> = validation_errors
+                    .into_iter()
+                    .map(|err| {
+                        JsonApiError::new(422, "VALIDATION_ERROR", "Validation Failed")
+                            .with_detail(err)
+                    })
+                    .collect();
+                (
+                    StatusCode::UNPROCESSABLE_ENTITY,
+                    ApiErrorResponse::new(errors),
+                )
+            }
+            AppError::NotFound => {
+                let error = JsonApiError::new(404, "NOT_FOUND", "Resource Not Found")
+                    .with_detail("The requested resource was not found");
+                (
+                    StatusCode::NOT_FOUND,
+                    ApiErrorResponse::from_single_error(error),
+                )
+            }
+            AppError::Unexpected(err) => {
+                let error = JsonApiError::new(500, "UNEXPECTED_ERROR", "Unexpected Error")
+                    .with_detail(format!("An unexpected error occurred: {}", err));
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    ApiErrorResponse::from_single_error(error),
+                )
+            }
         };
 
-        let body = Json(ApiErrorResponse::new(errors));
+        let body = Json(api_error);
         (status, body).into_response()
     }
 }

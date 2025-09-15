@@ -1,5 +1,5 @@
 use crate::pagination::PaginationRequest;
-use crate::response::ApiErrorResponse;
+use crate::response::{ApiErrorResponse, JsonApiError};
 use axum::{
     extract::{Query, Request, rejection::QueryRejection},
     http::StatusCode,
@@ -16,13 +16,32 @@ pub struct PaginationValidationRejection(Vec<String>);
 
 impl IntoResponse for PaginationValidationRejection {
     fn into_response(self) -> Response {
-        let body = axum::Json(ApiErrorResponse::new(self.0));
+        let errors: Vec<JsonApiError> = self
+            .0
+            .into_iter()
+            .map(|err| {
+                JsonApiError::new(
+                    400,
+                    "PAGINATION_VALIDATION_ERROR",
+                    "Pagination Validation Failed",
+                )
+                .with_detail(err)
+            })
+            .collect();
+        let body = axum::Json(ApiErrorResponse::new(errors));
         (StatusCode::BAD_REQUEST, body).into_response()
     }
 }
 
 fn query_rejection_to_response(rejection: QueryRejection) -> Response {
-    let body = axum::Json(ApiErrorResponse::new(vec![rejection.to_string()]));
+    let error = JsonApiError::new(
+        rejection.status().as_u16(),
+        "QUERY_PARAMETER_ERROR",
+        "Query Parameter Error",
+    )
+    .with_detail(rejection.to_string())
+    .with_source_parameter("query");
+    let body = axum::Json(ApiErrorResponse::from_single_error(error));
     (rejection.status(), body).into_response()
 }
 
