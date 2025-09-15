@@ -30,7 +30,6 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 validator = { version = "0.20.0", features = ["derive"] }
 utoipa = { version = "5.3.1", features = ["axum_extras", "debug"] }
 utoipa-swagger-ui = { version = "9.0.2", features = ["axum"] }
-utoipa-axum = { version = "0.2.0", features = ["debug"] }
 chrono = "0.4.41"
 jsonwebtoken = "9.3.1"
 bcrypt="0.17.0"
