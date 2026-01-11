@@ -1,32 +1,185 @@
-# Include any files or directories that you don't want to be copied to your
-# container here (e.g., local build artifacts, temporary files, etc.).
-#
-# For more help, visit the .dockerignore file reference guide at
-# https://docs.docker.com/go/build-context-dockerignore/
+# Rust build artifacts
+target/
+**/target/
+*.rs.bk
+*.pdb
+Cargo.lock
 
-**/.DS_Store
-**/.classpath
-**/.dockerignore
-**/.env
-**/.git
-**/.gitignore
-**/.project
-**/.settings
-**/.toolstarget
-**/.vs
-**/.vscode
-**/*.*proj.user
-**/*.dbmdl
-**/*.jfm
-**/charts
-**/docker-compose*
-**/compose.y*ml
-**/Dockerfile*
-**/node_modules
-**/npm-debug.log
-**/secrets.dev.yaml
-**/values.dev.yaml
-/bin
-/target
-LICENSE
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Git files
+.git/
+.gitignore
+.gitattributes
+
+# Documentation
 README.md
+*.md
+docs/
+
+# Environment files
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+.env.example
+
+# Logs
+*.log
+logs/
+log/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+
+# Test files
+tests/
+**/tests/
+test/
+**/test/
+*.test.rs
+*_test.rs
+
+# Benchmark files
+benches/
+**/benches/
+*.bench.rs
+
+# Examples
+examples/
+**/examples/
+*.example.rs
+
+# Docker files (except Dockerfile)
+docker-compose*.yml
+docker-compose*.yaml
+.dockerignore
+
+# CI/CD files
+.github/
+.gitlab-ci.yml
+.travis.yml
+.circleci/
+azure-pipelines.yml
+
+# Node.js (if any frontend tools)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+yarn.lock
+
+# Python (if any scripts)
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Backup files
+*.bak
+*.backup
+*.old
+
+# Archive files
+*.tar
+*.tar.gz
+*.zip
+*.rar
+*.7z
+
+# Binary files (except the final binary)
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Profiling and debugging
+*.prof
+*.gcov
+*.gcda
+*.gcno
+
+# Coverage reports
+coverage/
+*.coverage
+*.lcov
+
+# Memory optimization documentation (not needed in container)
+MEMORY_OPTIMIZATION.md
+
+# Migration workspace (handled separately if needed)
+# migration/target/
+# migration/Cargo.lock
+
+# Development tools
+rustfmt.toml
+.clippy.toml
+rust-toolchain.toml
+
+# Local development files
+local/
+dev/
+development/
+
+# Monitoring and profiling tools
+heaptrack/
+valgrind/
+*.heaptrack
+*.massif
+
+# Build scripts (if not needed in container)
+build.sh
+build.bat
+scripts/
+
+# Configuration files that might contain secrets
+config/local/
+config/dev/
+*.local.toml
+*.local.yaml
+*.local.yml
+*.local.json
+
+# Cache directories
+.cargo/
+.cache/
+cache/
+
+# Generated files
+*.generated.rs
+generated/
+
+# Backup and temporary Rust files
+*.rls/
+*.rustfmt
+*.rustc_info.json 

@@ -1,75 +1,75 @@
-# syntax=docker/dockerfile:1
+# ===========================
+# 🚧 Build Stage
+# ===========================
+FROM rust:1.85-slim AS builder
 
-# Comments are provided throughout this file to help you get started.
-# If you need more help, visit the Dockerfile reference guide at
-# https://docs.docker.com/go/dockerfile-reference/
+# Install build dependencies including OpenSSL
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends \
+      gcc libssl-dev pkg-config make ca-certificates openssl \
+      libssl3 libcrypto3 \
+ && rm -rf /var/lib/apt/lists/*
 
-# Want to help us make this template better? Share your feedback here: https://forms.gle/ybq9Krt8jtBL3iCk7
+# Set pkg-config to find OpenSSL
+ENV PKG_CONFIG_PATH=/usr/lib/x86_64-linux-gnu/pkgconfig
+ENV OPENSSL_LIB_DIR=/usr/lib/x86_64-linux-gnu
+ENV OPENSSL_INCLUDE_DIR=/usr/include/openssl
+ENV OPENSSL_STATIC=0
 
-ARG RUST_VERSION=1.87.0
-ARG APP_NAME=zero2prod
+# Optimize for faster builds
+ENV CARGO_INCREMENTAL=1
 
-################################################################################
-# Create a stage for building the application.
-
-FROM rust:${RUST_VERSION}-alpine AS build
-ARG APP_NAME
+# Create a new empty shell project
 WORKDIR /app
 
-# Install host build dependencies.
-RUN apk add --no-cache clang lld musl-dev git openssl-dev curl openssl-libs-static
+# Copy dependency files and migration folder first (for better caching)
+COPY Cargo.toml ./
+COPY migration/ ./migration/
 
-# Build the application.
-# Leverage a cache mount to /usr/local/cargo/registry/
-# for downloaded dependencies, a cache mount to /usr/local/cargo/git/db
-# for git repository dependencies, and a cache mount to /app/target/ for
-# compiled dependencies which will speed up subsequent builds.
-# Leverage a bind mount to the src directory to avoid having to copy the
-# source code into the container. Once built, copy the executable to an
-# output directory before the cache mounted /app/target is unmounted.
-RUN --mount=type=bind,source=src,target=src \
-    --mount=type=bind,source=Cargo.toml,target=Cargo.toml \
-    --mount=type=bind,source=Cargo.lock,target=Cargo.lock \
-    --mount=type=bind,source=migration,target=migration \
-    --mount=type=cache,target=/app/target/ \
-    --mount=type=cache,target=/usr/local/cargo/git/db \
-    --mount=type=cache,target=/usr/local/cargo/registry/ \
-cargo build --locked --release && \
-cp ./target/release/$APP_NAME /bin/server
+# Create minimal source structure for dependency resolution
+RUN mkdir -p src && \
+    echo "fn main() {}" > src/main.rs && \
+    echo "fn main() {}" > src/lib.rs
 
-################################################################################
-# Create a new stage for running the application that contains the minimal
-# runtime dependencies for the application. This often uses a different base
-# image from the build stage where the necessary files are copied from the build
-# stage.
-#
-# The example below uses the alpine image as the foundation for running the app.
-# By specifying the "3.18" tag, it will use version 3.18 of alpine. If
-# reproducibility is important, consider using a digest
-# (e.g., alpine@sha256:664888ac9cfd28068e062c991ebcff4b4c7307dc8dd4df9e728bedde5c449d91).
-FROM alpine:3.18 AS final
+# Pre-download and cache dependencies (this layer will be cached if Cargo.toml/lock haven't changed)
+RUN cargo fetch
 
-# Create a non-privileged user that the app will run under.
-# See https://docs.docker.com/go/dockerfile-user-best-practices/
-ARG UID=10001
-RUN adduser \
-    --disabled-password \
-    --gecos "" \
-    --home "/nonexistent" \
-    --shell "/sbin/nologin" \
-    --no-create-home \
-    --uid "${UID}" \
-    appuser
-USER appuser
+# Remove dummy files and copy actual source code
+RUN rm -rf src
+COPY src/ ./src/
 
-# Copy the executable from the "build" stage.
-COPY --from=build /bin/server /bin/
+# Build the actual application (this layer will only rebuild if source code changes)
+RUN cargo build --release
 
-# Copy migrations directory for runtime
-COPY migration /migration
 
-# Expose the port that the application listens on.
-EXPOSE 4000
+# ===========================
+# 🏁 Final Stage (Minimal Runtime)
+# ===========================
+FROM scratch AS runtime
 
-# What the container should run when it is started.
-CMD ["/bin/server"]
+# Copy the binary from the builder
+COPY --from=builder /app/target/release/rust-mini-api /usr/src/app
+
+# Set mimalloc optimization environment variables
+ENV MIMALLOC_SHOW_STATS=1
+ENV MIMALLOC_PAGE_RESET=1
+ENV MIMALLOC_SECURE=1
+ENV MIMALLOC_LARGE_OS_PAGES=1
+ENV MIMALLOC_RESERVE_HUGE_OS_PAGES=1
+ENV MIMALLOC_EAGER_COMMIT=1
+ENV MIMALLOC_EAGER_REGION_COMMIT=1
+
+# Copy necessary shared libraries for glibc
+COPY --from=builder /lib/x86_64-linux-gnu/libc.so.6 /lib/x86_64-linux-gnu/
+COPY --from=builder /lib/x86_64-linux-gnu/libm.so.6 /lib/x86_64-linux-gnu/
+COPY --from=builder /lib/x86_64-linux-gnu/libdl.so.2 /lib/x86_64-linux-gnu/
+COPY --from=builder /lib/x86_64-linux-gnu/librt.so.1 /lib/x86_64-linux-gnu/
+COPY --from=builder /lib/x86_64-linux-gnu/libpthread.so.0 /lib/x86_64-linux-gnu/
+COPY --from=builder /lib/x86_64-linux-gnu/libgcc_s.so.1 /lib/x86_64-linux-gnu/
+COPY --from=builder /usr/lib/x86_64-linux-gnu/libcrypto.so.3 /lib/x86_64-linux-gnu/
+COPY --from=builder /usr/lib/x86_64-linux-gnu/libssl.so.3 /lib/x86_64-linux-gnu/
+COPY --from=builder /lib64/ld-linux-x86-64.so.2 /lib64/
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
+
+# Set binary as entrypoint
+ENTRYPOINT ["/usr/src/app"]
