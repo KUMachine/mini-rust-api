@@ -73,7 +73,7 @@ The codebase follows a strict DDD layered architecture:
 
 ```
 src/
-├── domain/              # Core business logic - NO external dependencies
+├── features/              # Core business logic - NO external dependencies
 │   ├── shared/          # Shared value objects (UserId)
 │   └── user/            # User aggregate
 │       ├── entity.rs    # User entity (aggregate root)
@@ -83,7 +83,7 @@ src/
 │       ├── repository.rs    # Repository trait (port)
 │       └── errors.rs    # Domain errors
 │
-├── application/         # Use cases, orchestration - depends only on domain
+├── app/         # Use cases, orchestration - depends only on domain
 │   ├── auth/            # Auth use cases
 │   │   ├── login_use_case.rs
 │   │   ├── register_use_case.rs
@@ -99,7 +99,7 @@ src/
 │   │   └── token_service.rs  # TokenService trait
 │   └── errors.rs        # Application errors
 │
-├── infrastructure/      # External concerns - adapters
+├── infra/      # External concerns - adapters
 │   ├── persistence/     # Database implementations
 │   │   ├── entities/    # SeaORM entities
 │   │   └── sea_orm_user_repository.rs  # Repository implementation
