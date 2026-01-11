@@ -1,5 +1,6 @@
 [package]
-name = "zero2prod"
+name = "rust-mini-api"
+description = "Mini Rust API"
 version = "0.1.0"
 edition = "2024"
 
@@ -7,30 +8,31 @@ edition = "2024"
 members = [".", "migration"]
 
 [[bin]]
-name = "zero2prod"
+name = "rust-mini-api"
 path = "src/main.rs"
 
 [lib]
-name = "zero2prod"
+name = "mini_rust_api"
 path = "src/lib.rs"
 
 [dependencies]
-migration = {path = "migration"}
-axum = { version = "0.8.4", features = ["macros"] }
-axum-extra = { version = "0.10.1", features = ["typed-header"]}
-tokio = { version = "1.45.1", features = ["full"] }
-sea-orm = { version = "1.1.0", features = ["sqlx-postgres", "runtime-tokio-native-tls", "macros"] }
+migration = { path = "migration" }
+axum = "0.8.4"
+axum-core = "0.5.2"
+axum-extra = { version = "0.12.2", features = ["typed-header"]}
+tower-http = { version = "0.6.6", features = ["cors", "trace"] }
 dotenvy = "0.15.7"
+sea-orm = { version = "1.1.0", features = ["sqlx-postgres", "runtime-tokio-native-tls", "macros"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-thiserror = "2.0.12"
-tower-http = { version = "0.6.6", features = ["cors", "trace"] }
+tokio = { version = "1.46.1", features = ["full"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
-validator = { version = "0.20.0", features = ["derive"] }
 utoipa = { version = "5.3.1", features = ["axum_extras", "debug"] }
 utoipa-swagger-ui = { version = "9.0.2", features = ["axum"] }
-chrono = "0.4.41"
-jsonwebtoken = "9.3.1"
-bcrypt="0.17.0"
-axum-core = "0.5.2"
+validator = { version = "0.20.0", features = ["derive"] }
+thiserror = "2.0.16"
+chrono = "0.4.42"
+bcrypt = "0.17.1"
+jsonwebtoken = { version = "10.1.0", features = ["rust_crypto"] }
+async-trait = "0.1.68"

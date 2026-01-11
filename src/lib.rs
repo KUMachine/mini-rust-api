@@ -1,29 +1,22 @@
-pub mod auth;
-pub mod config;
-pub mod docs;
-pub mod entity;
-pub mod errors;
-pub mod extractors;
-pub mod middleware;
-pub mod models;
-pub mod pagination;
-pub mod response;
-pub mod routes;
-pub mod validators;
+//! Mini Rust API
+//!
+//! A Domain-Driven Design (DDD) structured REST API using Axum, SeaORM, and JWT authentication.
+//!
+//! # Architecture
+//!
+//! The codebase follows a clean DDD layered architecture:
+//!
+//! - **Domain Layer** (`domain/`): Core business logic, entities, value objects, repository traits
+//! - **Application Layer** (`application/`): Use cases, DTOs, application services, ports
+//! - **Infrastructure Layer** (`infrastructure/`): Repository implementations, external services, config
+//! - **Presentation Layer** (`presentation/`): HTTP handlers, middleware, extractors, responses
 
-// Re-export commonly used items for convenience
-pub use auth::{Claims, auth_middleware, auth_routes};
-pub use config::Config;
-pub use config::database;
-pub use errors::AppError;
-pub use middleware::{cors::cors_layer, tracing::tracing_layer};
-pub use models::user::UserResponse;
-pub use response::ApiResponse;
+pub mod app;
+pub mod features;
+pub mod infra;
+pub mod presentation;
 
-use sea_orm::DbConn;
-use std::sync::Arc;
-
-#[derive(Clone)]
-pub struct AppState {
-    pub db: Arc<DbConn>,
-}
+// Re-exports for convenience
+pub use app::ApplicationError;
+pub use infra::Config;
+pub use presentation::AppState;

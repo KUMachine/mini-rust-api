@@ -1,29 +1,62 @@
-version: "3.8"
+version: "3.1"
 
 services:
-  app:
-    build: .
-    ports:
-      - "4000:4000"
+  postgresql:
+    image: postgres
     environment:
-      - DATABASE_URL=postgres://postgres:example@db:5432/zero2prod
-      - SERVER_HOST=0.0.0.0
-      - SERVER_PORT=4000
-    depends_on:
-      - db
-
-  db:
-    image: postgres:15
-    restart: always
-    shm_size: 128mb
+      POSTGRES_USERNAME: postgres
+      POSTGRES_PASSWORD: example
+      POSTGRES_DB: rust_mini_api
     ports:
       - "5432:5432"
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: example
-      POSTGRES_DB: zero2prod
-    volumes:
-      - pgdata:/var/lib/postgresql/data
 
-volumes:
-  pgdata:
+  # rabbitmq:
+  #   image: rabbitmq:3.11.8-management-alpine
+  #   ports:
+  #     - "5672:5672"
+  #     - "15672:15672"
+
+  # minio:
+  #   image: bitnami/minio:latest
+  #   environment:
+  #     - MINIO_ROOT_USER=admin123
+  #     - MINIO_ROOT_PASSWORD=admin123
+  #     - MINIO_DEFAULT_BUCKETS=payroll-dev
+  #   ports:
+  #     - 9000:9000
+  #     - 9001:9001
+
+  # redis:
+  #   image: "bitnami/redis:latest"
+  #   environment:
+  #     - REDIS_PASSWORD=password
+  #     - REDIS_SENTINEL_FAILOVER_TIMEOUT=5000
+  #     - REDIS_SENTINEL_DOWN_AFTER_MILLISECONDS=5000
+  #     - REDIS_REPLICATION_MODE=master
+  #   ports:
+  #     - 6379:6379
+  # jaeger:
+  #   image: cr.jaegertracing.io/jaegertracing/jaeger:2.8.0
+  #   ports:
+  #     - 16686:16686
+  #     - 4317:4317
+
+  rust-mini-api:
+    image: test-debug
+    ports:
+      - 3000:3000
+    env_file:
+      - .env
+    environment:
+      - DATABASE__HOST=postgresql
+      - REDIS__URL=redis://:password@redis:6379
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4317
+      - OTEL_LOG_LEVEL=debug
+
+    depends_on:
+      - postgresql
+      # - redis
+    deploy:
+      resources:
+        limits:
+          memory: 60MiB
