@@ -41,22 +41,22 @@ services:
   #     - 16686:16686
   #     - 4317:4317
 
-  rust-mini-api:
-    image: test-debug
-    ports:
-      - 3000:3000
-    env_file:
-      - .env
-    environment:
-      - DATABASE__HOST=postgresql
-      - REDIS__URL=redis://:password@redis:6379
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4317
-      - OTEL_LOG_LEVEL=debug
+  # rust-mini-api:
+  #   image: test-debug
+  #   ports:
+  #     - 3000:3000
+  #   env_file:
+  #     - .env
+  #   environment:
+  #     - DATABASE__HOST=postgresql
+  #     - REDIS__URL=redis://:password@redis:6379
+  #     - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4317
+  #     - OTEL_LOG_LEVEL=debug
 
-    depends_on:
-      - postgresql
-      # - redis
-    deploy:
-      resources:
-        limits:
-          memory: 60MiB
+  #   depends_on:
+  #     - postgresql
+  #     # - redis
+  #   deploy:
+  #     resources:
+  #       limits:
+  #         memory: 60MiB
