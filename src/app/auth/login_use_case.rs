@@ -23,7 +23,7 @@ impl LoginUseCase {
 
     pub async fn execute(&self, command: LoginCommand) -> AppResult<AuthToken> {
         // Parse and validate email (domain validation)
-        let email = Email::new(command.email)?;
+        let email = Email::try_from(command.email)?;
 
         // Find user by email
         let user = self
@@ -41,7 +41,7 @@ impl LoginUseCase {
             .token_service
             .generate_token(
                 user.id().ok_or(ApplicationError::UserNotFound)?.value(),
-                user.email().as_str(),
+                user.email().as_ref(),
             )
             .await?;
 

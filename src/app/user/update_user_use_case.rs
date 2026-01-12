@@ -29,7 +29,7 @@ impl UpdateUserUseCase {
             .ok_or(ApplicationError::UserNotFound)?;
 
         // Parse and validate email (domain validation)
-        let new_email = Email::new(command.email)?;
+        let new_email = Email::try_from(command.email)?;
 
         // Domain logic: update email if different
         user.change_email(new_email)?;

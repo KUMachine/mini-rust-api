@@ -7,7 +7,7 @@ FROM rust:1.85-slim AS builder
 RUN apt-get update \
  && apt-get install -y --no-install-recommends \
       gcc libssl-dev pkg-config make ca-certificates openssl \
-      libssl3 libcrypto3 \
+      libssl3 \
  && rm -rf /var/lib/apt/lists/*
 
 # Set pkg-config to find OpenSSL

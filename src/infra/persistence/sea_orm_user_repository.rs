@@ -22,7 +22,7 @@ impl SeaOrmUserRepository {
 
     /// Convert SeaORM model to domain User entity
     fn to_domain(&self, model: users::Model) -> Result<User, RepositoryError> {
-        let email = Email::new(model.email)
+        let email = Email::try_from(model.email)
             .map_err(|e| RepositoryError::DatabaseError(format!("Invalid email: {}", e)))?;
 
         let password = Password::from_hash(model.password_hash);
@@ -42,7 +42,7 @@ impl SeaOrmUserRepository {
     /// Convert domain User to SeaORM ActiveModel for insert
     fn to_active_model_insert(&self, user: &User) -> users::ActiveModel {
         users::ActiveModel {
-            email: Set(user.email().as_str().to_string()),
+            email: Set(user.email().to_string()),
             password_hash: Set(user.password().hashed().to_string()),
             first_name: Set(user.profile().first_name().to_string()),
             last_name: Set(user.profile().last_name().to_string()),
@@ -58,7 +58,7 @@ impl SeaOrmUserRepository {
 
         users::ActiveModel {
             id: Set(id),
-            email: Set(user.email().as_str().to_string()),
+            email: Set(user.email().to_string()),
             password_hash: Set(user.password().hashed().to_string()),
             first_name: Set(user.profile().first_name().to_string()),
             last_name: Set(user.profile().last_name().to_string()),
@@ -84,7 +84,7 @@ impl UserRepository for SeaOrmUserRepository {
 
     async fn find_by_email(&self, email: &Email) -> Result<Option<User>, RepositoryError> {
         let model = Users::find()
-            .filter(users::Column::Email.eq(email.as_str()))
+            .filter(users::Column::Email.eq(email.to_string()))
             .one(self.db.as_ref())
             .await
             .map_err(|e| RepositoryError::DatabaseError(e.to_string()))?;
@@ -120,7 +120,7 @@ impl UserRepository for SeaOrmUserRepository {
 
     async fn exists_with_email(&self, email: &Email) -> Result<bool, RepositoryError> {
         let exists = Users::find()
-            .filter(users::Column::Email.eq(email.as_str()))
+            .filter(users::Column::Email.eq(email.to_string()))
             .one(self.db.as_ref())
             .await
             .map_err(|e| RepositoryError::DatabaseError(e.to_string()))?

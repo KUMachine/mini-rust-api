@@ -18,7 +18,7 @@ impl UserResponse {
     pub fn from_domain(user: &User) -> Self {
         Self {
             id: user.id().expect("User must have an ID").value(),
-            email: user.email().as_str().to_string(),
+            email: user.email().as_ref().to_string(),
             first_name: user.profile().first_name().to_string(),
             last_name: user.profile().last_name().to_string(),
             age: user.profile().age(),
