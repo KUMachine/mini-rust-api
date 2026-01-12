@@ -137,7 +137,7 @@ mod tests {
 
     #[test]
     fn test_user_registration() {
-        let email = Email::new("test@example.com".to_string()).unwrap();
+        let email = Email::try_from("test@example.com".to_string()).unwrap();
         let user = User::register(
             email,
             "SecurePass123".to_string(),
@@ -148,13 +148,13 @@ mod tests {
         .unwrap();
 
         assert!(user.id().is_none());
-        assert_eq!(user.email().as_str(), "test@example.com");
+        assert_eq!(user.email().as_ref(), "test@example.com");
         assert_eq!(user.profile().first_name(), "John");
     }
 
     #[test]
     fn test_user_authentication() {
-        let email = Email::new("test@example.com".to_string()).unwrap();
+        let email = Email::try_from("test@example.com".to_string()).unwrap();
         let user = User::register(
             email,
             "SecurePass123".to_string(),
@@ -170,7 +170,7 @@ mod tests {
 
     #[test]
     fn test_user_update_profile() {
-        let email = Email::new("test@example.com".to_string()).unwrap();
+        let email = Email::try_from("test@example.com".to_string()).unwrap();
         let mut user = User::register(
             email,
             "SecurePass123".to_string(),
@@ -190,7 +190,7 @@ mod tests {
 
     #[test]
     fn test_user_change_email() {
-        let email = Email::new("test@example.com".to_string()).unwrap();
+        let email = Email::try_from("test@example.com".to_string()).unwrap();
         let mut user = User::register(
             email,
             "SecurePass123".to_string(),
@@ -200,9 +200,9 @@ mod tests {
         )
         .unwrap();
 
-        let new_email = Email::new("newemail@example.com".to_string()).unwrap();
+        let new_email = Email::try_from("newemail@example.com".to_string()).unwrap();
         user.change_email(new_email).unwrap();
 
-        assert_eq!(user.email().as_str(), "newemail@example.com");
+        assert_eq!(user.email().as_ref(), "newemail@example.com");
     }
 }
