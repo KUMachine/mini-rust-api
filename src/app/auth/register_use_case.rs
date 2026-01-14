@@ -1,7 +1,7 @@
 use super::RegisterCommand;
 use crate::app::errors::{AppResult, ApplicationError};
 use crate::app::user::UserResponse;
-use crate::features::user::{Email, User, UserRepository};
+use crate::domain::user::{Email, User, UserRepository};
 use std::sync::Arc;
 
 /// RegisterUseCase - handles user registration

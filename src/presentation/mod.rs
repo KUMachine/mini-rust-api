@@ -5,10 +5,12 @@
 //! - HTTP extractors
 //! - HTTP middleware
 //! - Response types
+//! - Error responses (HTTP translation)
 //! - OpenAPI documentation
 //! - Application state
 
 pub mod api;
+pub mod errors;
 pub mod extractors;
 pub mod middleware;
 pub mod openapi;

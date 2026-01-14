@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a Rust REST API boilerplate using Axum web framework with JWT authentication, PostgreSQL database (via SeaORM), and comprehensive API documentation (via utoipa/Swagger). The codebase follows **Domain-Driven Design (DDD)** principles with a clean layered architecture.
+This is a Rust REST API boilerplate using Axum web framework with JWT authentication, PostgreSQL database (via SeaORM), and comprehensive API documentation (via utoipa/Swagger). The codebase follows **Hexagonal Architecture** (Ports & Adapters) with Domain-Driven Design (DDD) principles.
 
 ## Common Commands
 
@@ -67,13 +67,13 @@ docker-compose up rust-mini-api
 
 ## Architecture
 
-### Domain-Driven Design (DDD) Layers
+### Hexagonal Architecture (Ports & Adapters)
 
-The codebase follows a strict DDD layered architecture:
+The codebase follows hexagonal architecture with clear layer separation:
 
 ```
 src/
-├── features/              # Core business logic - NO external dependencies
+├── domain/              # Core business logic - NO external dependencies
 │   ├── shared/          # Shared value objects (UserId)
 │   └── user/            # User aggregate
 │       ├── entity.rs    # User entity (aggregate root)
@@ -83,7 +83,7 @@ src/
 │       ├── repository.rs    # Repository trait (port)
 │       └── errors.rs    # Domain errors
 │
-├── app/         # Use cases, orchestration - depends only on domain
+├── app/                 # Use cases, orchestration - depends only on domain
 │   ├── auth/            # Auth use cases
 │   │   ├── login_use_case.rs
 │   │   ├── register_use_case.rs
@@ -97,9 +97,9 @@ src/
 │   │   └── mod.rs       # Commands & queries
 │   ├── ports/           # Service ports (traits for infrastructure)
 │   │   └── token_service.rs  # TokenService trait
-│   └── errors.rs        # Application errors
+│   └── errors.rs        # Application errors (transport-agnostic)
 │
-├── infra/      # External concerns - adapters
+├── infra/               # External concerns - adapters
 │   ├── persistence/     # Database implementations
 │   │   ├── entities/    # SeaORM entities
 │   │   └── sea_orm_user_repository.rs  # Repository implementation
@@ -114,6 +114,7 @@ src/
 │   │   ├── auth.rs      # Auth endpoints
 │   │   ├── users.rs     # User CRUD endpoints
 │   │   └── health.rs    # Health check
+│   ├── errors.rs        # HTTP error responses (IntoResponse)
 │   ├── extractors/      # Axum extractors
 │   │   ├── validated_json.rs
 │   │   └── validated_pagination.rs
@@ -124,41 +125,69 @@ src/
 │   │   ├── api_response.rs  # JSON:API responses
 │   │   └── pagination.rs
 │   ├── openapi/         # OpenAPI documentation
-│   └── state.rs         # AppState
+│   └── state.rs         # AppState (no infrastructure details)
 │
-└── main.rs              # Application entry point
+├── bootstrap.rs         # Dependency wiring (DI container)
+│
+└── main.rs              # Minimal application entry point
 ```
 
-### Layer Dependencies
+### Layer Dependencies (Hexagonal)
 
 ```
-Presentation → Application → Domain
-      ↓              ↓
-Infrastructure (implements ports)
+                    ┌─────────────────┐
+                    │   Presentation  │  ← HTTP adapters (inbound)
+                    └────────┬────────┘
+                             │
+                    ┌────────▼────────┐
+                    │   Application   │  ← Use cases, orchestration
+                    └────────┬────────┘
+                             │
+                    ┌────────▼────────┐
+                    │     Domain      │  ← Pure business logic
+                    └─────────────────┘
+                             ▲
+                    ┌────────┴────────┐
+                    │  Infrastructure │  ← Database/external adapters (outbound)
+                    └─────────────────┘
 ```
 
-- **Domain Layer**: Pure business logic with no external dependencies. Contains entities, value objects, and repository traits (ports).
-- **Application Layer**: Orchestrates use cases, depends only on domain. Defines ports (traits) that infrastructure implements.
-- **Infrastructure Layer**: Implements adapters - database repositories, external services, configuration.
-- **Presentation Layer**: Handles HTTP concerns - routes, handlers, extractors, middleware, responses.
+**Key Principles:**
+
+- **Domain Layer**: Pure business logic with no external dependencies. Contains entities, value objects, and repository traits (ports). Has NO knowledge of HTTP, databases, or frameworks.
+- **Application Layer**: Orchestrates use cases, depends only on domain. Defines ports (traits) that infrastructure implements. Transport-agnostic - no HTTP concerns.
+- **Infrastructure Layer**: Implements adapters - database repositories, external services, configuration. Translates between domain and external systems.
+- **Presentation Layer**: Handles HTTP concerns - routes, handlers, extractors, middleware, error-to-HTTP translation. This is where `IntoResponse` implementations live.
+- **Bootstrap**: Wires all dependencies together. Isolates DI logic from `main.rs`.
+
+### Key Architectural Decisions
+
+1. **Application errors are transport-agnostic**: `ApplicationError` in `app/errors.rs` knows nothing about HTTP. The `IntoResponse` implementation lives in `presentation/errors.rs`.
+
+2. **AppState doesn't expose infrastructure**: No database connections or concrete implementations in `AppState`. Only use cases are exposed.
+
+3. **Repository errors are persistence-agnostic**: Uses `PersistenceFailure` instead of `DatabaseError` to avoid coupling to specific storage.
+
+4. **Bootstrap module**: All dependency wiring happens in `bootstrap.rs`, keeping `main.rs` clean and focused.
 
 ### Dependency Injection
 
 The application uses trait-based dependency injection with Arc-wrapped services:
 
-1. Repository traits are defined in the domain layer
+1. Repository traits (ports) are defined in the domain layer
 2. Service traits (ports) are defined in the application layer
-3. Implementations are in infrastructure
-4. All services are stored in `AppState` and passed via Axum's state system
+3. Implementations (adapters) are in infrastructure
+4. Bootstrap wires everything together
+5. Use cases are stored in `AppState` and passed via Axum's state system
 
-Example from `main.rs`:
+Example from `bootstrap.rs`:
 
 ```rust
-// Infrastructure layer
-let user_repository: Arc<dyn UserRepository> = Arc::new(SeaOrmUserRepository::new(db.clone()));
+// Infrastructure layer: create adapters
+let user_repository: Arc<dyn UserRepository> = Arc::new(SeaOrmUserRepository::new(db));
 let token_service: Arc<dyn TokenService> = Arc::new(JwtTokenService::new());
 
-// Application layer
+// Application layer: inject adapters into use cases
 let login_use_case = Arc::new(LoginUseCase::new(user_repository.clone(), token_service.clone()));
 ```
 
@@ -167,7 +196,7 @@ let login_use_case = Arc::new(LoginUseCase::new(user_repository.clone(), token_s
 JWT-based authentication using bcrypt for password hashing:
 
 1. **Registration/Login**: Handled in `presentation/api/auth.rs`
-2. **Token Creation**: `infrastructure/auth/jwt_token_service.rs` implements `TokenService` port
+2. **Token Creation**: `infra/auth/jwt_token_service.rs` implements `TokenService` port
 3. **Middleware**: `presentation/middleware/auth.rs` validates Bearer tokens
 4. **Protected Routes**: Apply `auth_middleware` as a route layer
 5. **Access Claims**: Extract `Claims` in handlers using Axum's `FromRequestParts`
@@ -178,9 +207,10 @@ Layered error handling using `thiserror`:
 
 - **DomainError**: Business rule violations (in `domain/user/errors.rs`)
 - **RepositoryError**: Persistence errors (in `domain/user/repository.rs`)
-- **ApplicationError**: Application layer errors that wrap domain/repo errors (in `application/errors.rs`)
+- **ApplicationError**: Application layer errors that wrap domain/repo errors (in `app/errors.rs`) - **transport-agnostic**
+- **HTTP Translation**: `IntoResponse` for `ApplicationError` lives in `presentation/errors.rs`
 
-All errors return JSON:API formatted responses via `IntoResponse` implementation.
+All errors return JSON:API formatted responses.
 
 ### Validation & Extractors
 
@@ -194,7 +224,7 @@ Custom extractors provide automatic validation:
 
 Environment-based configuration loaded via dotenvy:
 
-- **Config struct** (`infrastructure/config/app_config.rs`): Loaded at startup
+- **Config struct** (`infra/config/app_config.rs`): Loaded at startup
 - Required variables: `DATABASE__*`, `JWT_SECRET`
 - Optional with defaults: `SERVER__HOST` (0.0.0.0), `SERVER__PORT` (3000)
 
@@ -208,42 +238,45 @@ OpenAPI/Swagger documentation auto-generated using utoipa:
 
 ## Development Patterns
 
-### Adding a New Feature (DDD Approach)
+### Adding a New Feature (Hexagonal Approach)
 
-1. **Domain Layer**:
+1. **Domain Layer** (`domain/`):
 
    - Define entity/aggregate with business logic
    - Create value objects for domain concepts
    - Define repository trait (port)
    - Define domain errors
 
-2. **Application Layer**:
+2. **Application Layer** (`app/`):
 
    - Create use case(s) that orchestrate domain logic
    - Define command/query DTOs
    - Define response DTOs
    - If needed, define service ports (traits)
 
-3. **Infrastructure Layer**:
+3. **Infrastructure Layer** (`infra/`):
 
    - Implement repository trait with SeaORM
    - Implement any service ports
    - Add SeaORM entities if needed
 
-4. **Presentation Layer**:
+4. **Presentation Layer** (`presentation/`):
 
    - Create API handlers
    - Add routes
+   - Add error-to-HTTP translation if needed
    - Update OpenAPI documentation
 
-5. **Wire Up**:
-   - Add to `AppState` in `presentation/state.rs`
-   - Instantiate in `main.rs`
+5. **Wire Up** (`bootstrap.rs`):
+   - Create infrastructure instances
+   - Inject into use cases
+   - Add to `AppState`
 
 ### Testing
 
-- Unit tests for domain logic (in domain modules)
-- Integration tests in `tests/` directory
+- **Unit tests** for domain logic (in domain modules) - no mocking needed
+- **Integration tests** in `tests/` directory
+- Use cases can be tested with mock repositories
 - Tests can access the library via `use mini_rust_api::*`
 
 ## Environment Setup

@@ -1,15 +1,18 @@
 use super::{Email, User};
-use crate::features::shared::UserId;
+use crate::domain::shared::UserId;
 use async_trait::async_trait;
 use thiserror::Error;
 
 /// Repository errors
+///
+/// These errors are persistence-agnostic - they don't mention specific
+/// storage mechanisms like databases, files, or APIs.
 #[derive(Error, Debug)]
 pub enum RepositoryError {
-    #[error("Database error: {0}")]
-    DatabaseError(String),
+    #[error("Persistence failure: {0}")]
+    PersistenceFailure(String),
 
-    #[error("User not found")]
+    #[error("Entity not found")]
     NotFound,
 
     #[error("Unexpected error: {0}")]

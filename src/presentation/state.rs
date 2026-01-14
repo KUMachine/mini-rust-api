@@ -1,20 +1,21 @@
 //! Application state
 //!
 //! Contains the shared application state passed to all handlers.
+//! Note: Infrastructure details like database connections are NOT exposed here.
+//! Handlers interact with use cases only, which abstract away persistence.
 
 use crate::app::auth::{LoginUseCase, RegisterUseCase};
 use crate::app::user::{CreateUserUseCase, GetUserUseCase, ListUsersUseCase, UpdateUserUseCase};
 use crate::infra::Config;
-use sea_orm::DbConn;
 use std::sync::Arc;
 
 /// Shared application state
 ///
 /// Contains all dependencies that need to be available to request handlers.
+/// Only exposes use cases - no infrastructure details leak through.
 #[derive(Clone)]
 pub struct AppState {
     pub config: Config,
-    pub db: Arc<DbConn>,
     // Auth use cases
     pub login_use_case: Arc<LoginUseCase>,
     pub register_use_case: Arc<RegisterUseCase>,

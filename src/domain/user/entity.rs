@@ -1,5 +1,5 @@
 use super::{DomainError, Email, Password, UserProfile};
-use crate::features::shared::UserId;
+use crate::domain::shared::UserId;
 use chrono::NaiveDate;
 
 /// User aggregate root - rich domain entity with business logic
