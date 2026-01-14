@@ -1,6 +1,6 @@
 use super::{ListUsersQuery, UserResponse};
 use crate::app::errors::AppResult;
-use crate::features::user::UserRepository;
+use crate::domain::user::UserRepository;
 use std::sync::Arc;
 
 /// ListUsersUseCase - handles listing users with pagination

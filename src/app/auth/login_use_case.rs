@@ -1,7 +1,7 @@
 use super::{AuthToken, LoginCommand};
 use crate::app::errors::{AppResult, ApplicationError};
 use crate::app::ports::TokenService;
-use crate::features::user::{Email, UserRepository};
+use crate::domain::user::{Email, UserRepository};
 use std::sync::Arc;
 
 /// LoginUseCase - handles user login

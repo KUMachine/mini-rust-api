@@ -1,6 +1,6 @@
 use super::{CreateUserCommand, UserResponse};
 use crate::app::errors::{AppResult, ApplicationError};
-use crate::features::user::{Email, User, UserRepository};
+use crate::domain::user::{Email, User, UserRepository};
 use std::sync::Arc;
 
 /// CreateUserUseCase - handles creating a new user

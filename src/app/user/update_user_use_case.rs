@@ -1,7 +1,7 @@
 use super::{UpdateUserCommand, UserResponse};
 use crate::app::errors::{AppResult, ApplicationError};
-use crate::features::shared::UserId;
-use crate::features::user::{Email, UserRepository};
+use crate::domain::shared::UserId;
+use crate::domain::user::{Email, UserRepository};
 use std::sync::Arc;
 
 /// UpdateUserUseCase - handles updating an existing user

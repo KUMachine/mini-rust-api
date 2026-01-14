@@ -1,8 +1,8 @@
 use super::entities::users::{self, Entity as Users};
-use crate::features::shared::UserId;
-use crate::features::user::entity::User;
-use crate::features::user::repository::{RepositoryError, UserRepository};
-use crate::features::user::{Email, Password, UserProfile};
+use crate::domain::shared::UserId;
+use crate::domain::user::entity::User;
+use crate::domain::user::repository::{RepositoryError, UserRepository};
+use crate::domain::user::{Email, Password, UserProfile};
 use async_trait::async_trait;
 use sea_orm::{
     ActiveModelTrait, ColumnTrait, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder,
@@ -23,12 +23,12 @@ impl SeaOrmUserRepository {
     /// Convert SeaORM model to domain User entity
     fn to_domain(&self, model: users::Model) -> Result<User, RepositoryError> {
         let email = Email::try_from(model.email)
-            .map_err(|e| RepositoryError::DatabaseError(format!("Invalid email: {}", e)))?;
+            .map_err(|e| RepositoryError::PersistenceFailure(format!("Invalid email: {}", e)))?;
 
         let password = Password::from_hash(model.password_hash);
 
         let profile = UserProfile::new(model.first_name, model.last_name, model.age as u8)
-            .map_err(|e| RepositoryError::DatabaseError(format!("Invalid profile: {}", e)))?;
+            .map_err(|e| RepositoryError::PersistenceFailure(format!("Invalid profile: {}", e)))?;
 
         Ok(User::reconstitute(
             UserId::from_i32(model.id),
@@ -74,7 +74,7 @@ impl UserRepository for SeaOrmUserRepository {
         let model = Users::find_by_id(id.value())
             .one(self.db.as_ref())
             .await
-            .map_err(|e| RepositoryError::DatabaseError(e.to_string()))?;
+            .map_err(|e| RepositoryError::PersistenceFailure(e.to_string()))?;
 
         match model {
             Some(m) => Ok(Some(self.to_domain(m)?)),
@@ -87,7 +87,7 @@ impl UserRepository for SeaOrmUserRepository {
             .filter(users::Column::Email.eq(email.to_string()))
             .one(self.db.as_ref())
             .await
-            .map_err(|e| RepositoryError::DatabaseError(e.to_string()))?;
+            .map_err(|e| RepositoryError::PersistenceFailure(e.to_string()))?;
 
         match model {
             Some(m) => Ok(Some(self.to_domain(m)?)),
@@ -102,7 +102,7 @@ impl UserRepository for SeaOrmUserRepository {
             let inserted = active_model
                 .insert(self.db.as_ref())
                 .await
-                .map_err(|e| RepositoryError::DatabaseError(e.to_string()))?;
+                .map_err(|e| RepositoryError::PersistenceFailure(e.to_string()))?;
 
             // Set the ID on the user entity
             user.set_id(UserId::from_i32(inserted.id));
@@ -112,7 +112,7 @@ impl UserRepository for SeaOrmUserRepository {
             active_model
                 .update(self.db.as_ref())
                 .await
-                .map_err(|e| RepositoryError::DatabaseError(e.to_string()))?;
+                .map_err(|e| RepositoryError::PersistenceFailure(e.to_string()))?;
         }
 
         Ok(())
@@ -123,7 +123,7 @@ impl UserRepository for SeaOrmUserRepository {
             .filter(users::Column::Email.eq(email.to_string()))
             .one(self.db.as_ref())
             .await
-            .map_err(|e| RepositoryError::DatabaseError(e.to_string()))?
+            .map_err(|e| RepositoryError::PersistenceFailure(e.to_string()))?
             .is_some();
 
         Ok(exists)
@@ -142,12 +142,12 @@ impl UserRepository for SeaOrmUserRepository {
             .limit(rows_per_page)
             .all(self.db.as_ref())
             .await
-            .map_err(|e| RepositoryError::DatabaseError(e.to_string()))?;
+            .map_err(|e| RepositoryError::PersistenceFailure(e.to_string()))?;
 
         let total = Users::find()
             .count(self.db.as_ref())
             .await
-            .map_err(|e| RepositoryError::DatabaseError(e.to_string()))?;
+            .map_err(|e| RepositoryError::PersistenceFailure(e.to_string()))?;
 
         let users: Result<Vec<User>, RepositoryError> =
             models.into_iter().map(|m| self.to_domain(m)).collect();

@@ -1,7 +1,7 @@
 use super::UserResponse;
 use crate::app::errors::{AppResult, ApplicationError};
-use crate::features::shared::UserId;
-use crate::features::user::UserRepository;
+use crate::domain::shared::UserId;
+use crate::domain::user::UserRepository;
 use std::sync::Arc;
 
 /// GetUserUseCase - handles retrieving a single user

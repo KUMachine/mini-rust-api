@@ -1,4 +1,4 @@
-use crate::features::user::User;
+use crate::domain::user::User;
 use serde::Serialize;
 use utoipa::ToSchema;
 
