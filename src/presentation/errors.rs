@@ -3,9 +3,9 @@
 //! This module handles the translation of application errors to HTTP responses.
 //! All HTTP concerns (status codes, JSON formatting) are isolated here.
 
+use axum::Json;
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
-use axum::Json;
 
 use crate::app::ApplicationError;
 use crate::domain::user::errors::DomainError;
@@ -148,8 +148,9 @@ fn domain_error_to_response(err: DomainError) -> (StatusCode, ApiErrorResponse) 
             )
         }
         DomainError::PasswordHashingFailed => {
-            let error = JsonApiError::new(500, "PASSWORD_HASHING_FAILED", "Password Hashing Failed")
-                .with_detail("Failed to hash password");
+            let error =
+                JsonApiError::new(500, "PASSWORD_HASHING_FAILED", "Password Hashing Failed")
+                    .with_detail("Failed to hash password");
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 ApiErrorResponse::from_single_error(error),
