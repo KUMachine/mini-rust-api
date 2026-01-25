@@ -17,22 +17,22 @@ path = "src/lib.rs"
 
 [dependencies]
 migration = { path = "migration" }
-axum = "0.8.4"
-axum-core = "0.5.2"
-axum-extra = { version = "0.12.2", features = ["typed-header"]}
-tower-http = { version = "0.6.6", features = ["cors", "trace"] }
+axum = "0.8.8"
+axum-core = "0.5.6"
+axum-extra = { version = "0.12.5", features = ["typed-header"]}
+tower-http = { version = "0.6.8", features = ["cors", "trace"] }
 dotenvy = "0.15.7"
-sea-orm = { version = "1.1.0", features = ["sqlx-postgres", "runtime-tokio-native-tls", "macros"] }
+sea-orm = { version = "1.1.19", features = ["sqlx-postgres", "runtime-tokio-native-tls", "macros"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-tokio = { version = "1.46.1", features = ["full"] }
+tokio = { version = "1.49.0", features = ["full"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
-utoipa = { version = "5.3.1", features = ["axum_extras", "debug"] }
+utoipa = { version = "5.4.0", features = ["axum_extras", "debug"] }
 utoipa-swagger-ui = { version = "9.0.2", features = ["axum"] }
 validator = { version = "0.20.0", features = ["derive"] }
-thiserror = "2.0.16"
-chrono = "0.4.42"
+thiserror = "2.0.18"
+chrono = "0.4.43"
 bcrypt = "0.18.0"
-jsonwebtoken = { version = "10.1.0", features = ["rust_crypto"] }
-async-trait = "0.1.68"
+jsonwebtoken = { version = "10.2.0", features = ["rust_crypto"] }
+async-trait = "0.1.89"
