@@ -48,7 +48,7 @@ RUN cargo build --release
 FROM scratch AS runtime
 
 # Copy the binary from the builder
-COPY --from=builder /app/target/release/rust-mini-api /usr/src/app
+COPY --from=builder /app/target/release/mini-rust-api /usr/src/app
 
 # Set mimalloc optimization environment variables
 ENV MIMALLOC_SHOW_STATS=1

@@ -41,7 +41,7 @@ services:
   #     - 16686:16686
   #     - 4317:4317
 
-  # rust-mini-api:
+  # mini-rust-api:
   #   image: test-debug
   #   ports:
   #     - 3000:3000
