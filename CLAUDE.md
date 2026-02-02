@@ -61,8 +61,8 @@ cargo run -- fresh
 docker-compose up postgresql
 
 # Build and run the API
-docker build -t rust-mini-api .
-docker-compose up rust-mini-api
+docker build -t mini-rust-api .
+docker-compose up mini-rust-api
 ```
 
 ## Architecture

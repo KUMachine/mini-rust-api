@@ -1781,6 +1781,32 @@ dependencies = [
 ]
 
 [[package]]
+name = "mini-rust-api"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "axum",
+ "axum-core",
+ "axum-extra",
+ "bcrypt",
+ "chrono",
+ "dotenvy",
+ "jsonwebtoken",
+ "migration",
+ "sea-orm",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "tokio",
+ "tower-http",
+ "tracing",
+ "tracing-subscriber",
+ "utoipa",
+ "utoipa-swagger-ui",
+ "validator",
+]
+
+[[package]]
 name = "miniz_oxide"
 version = "0.8.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2433,32 +2459,6 @@ checksum = "5bcdef0be6fe7f6fa333b1073c949729274b05f123a0ad7efcb8efd878e5c3b1"
 dependencies = [
  "sha2",
  "walkdir",
-]
-
-[[package]]
-name = "rust-mini-api"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "axum",
- "axum-core",
- "axum-extra",
- "bcrypt",
- "chrono",
- "dotenvy",
- "jsonwebtoken",
- "migration",
- "sea-orm",
- "serde",
- "serde_json",
- "thiserror",
- "tokio",
- "tower-http",
- "tracing",
- "tracing-subscriber",
- "utoipa",
- "utoipa-swagger-ui",
- "validator",
 ]
 
 [[package]]

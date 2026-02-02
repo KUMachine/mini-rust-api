@@ -28,7 +28,7 @@ cargo run
 | `cargo build --release`           | Build for production |
 | `cargo fmt`                       | Format code          |
 | `cargo test`                      | Run all tests        |
-| `docker-compose up rust-mini-api` | Run with Docker      |
+| `docker-compose up mini-rust-api` | Run with Docker      |
 
 ## Project Structure
 

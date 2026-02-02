@@ -1,5 +1,5 @@
 [package]
-name = "rust-mini-api"
+name = "mini-rust-api"
 description = "Mini Rust API"
 version = "0.1.0"
 edition = "2024"
@@ -8,7 +8,7 @@ edition = "2024"
 members = [".", "migration"]
 
 [[bin]]
-name = "rust-mini-api"
+name = "mini-rust-api"
 path = "src/main.rs"
 
 [lib]
