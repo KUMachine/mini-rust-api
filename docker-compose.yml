@@ -4,9 +4,9 @@ services:
   postgresql:
     image: postgres
     environment:
-      POSTGRES_USERNAME: postgres
+      POSTGRES_USER: postgres
       POSTGRES_PASSWORD: example
-      POSTGRES_DB: rust_mini_api
+      POSTGRES_DB: mini-rust-api
     ports:
       - "5432:5432"
 
