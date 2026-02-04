@@ -39,7 +39,8 @@ impl UserProfile {
 
     /// Create a new UserProfile with validation
     pub fn new(first_name: String, last_name: String, age: u8) -> Result<Self, DomainError> {
-        let (first_name, last_name, age) = Self::validate_and_normalize(first_name, last_name, age)?;
+        let (first_name, last_name, age) =
+            Self::validate_and_normalize(first_name, last_name, age)?;
 
         Ok(Self {
             first_name,
@@ -75,7 +76,8 @@ impl UserProfile {
         last_name: String,
         age: u8,
     ) -> Result<(), DomainError> {
-        let (first_name, last_name, age) = Self::validate_and_normalize(first_name, last_name, age)?;
+        let (first_name, last_name, age) =
+            Self::validate_and_normalize(first_name, last_name, age)?;
 
         self.first_name = first_name;
         self.last_name = last_name;
