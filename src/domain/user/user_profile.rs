@@ -10,8 +10,11 @@ pub struct UserProfile {
 }
 
 impl UserProfile {
-    /// Create a new UserProfile with validation
-    pub fn new(first_name: String, last_name: String, age: u8) -> Result<Self, DomainError> {
+    fn validate_and_normalize(
+        first_name: String,
+        last_name: String,
+        age: u8,
+    ) -> Result<(String, String, u8), DomainError> {
         let first_name = first_name.trim().to_string();
         let last_name = last_name.trim().to_string();
 
@@ -30,6 +33,14 @@ impl UserProfile {
         if age > 150 {
             return Err(DomainError::InvalidAge);
         }
+
+        Ok((first_name, last_name, age))
+    }
+
+    /// Create a new UserProfile with validation
+    pub fn new(first_name: String, last_name: String, age: u8) -> Result<Self, DomainError> {
+        let (first_name, last_name, age) =
+            Self::validate_and_normalize(first_name, last_name, age)?;
 
         Ok(Self {
             first_name,
@@ -65,24 +76,8 @@ impl UserProfile {
         last_name: String,
         age: u8,
     ) -> Result<(), DomainError> {
-        let first_name = first_name.trim().to_string();
-        let last_name = last_name.trim().to_string();
-
-        if first_name.is_empty() {
-            return Err(DomainError::EmptyFirstName);
-        }
-
-        if last_name.is_empty() {
-            return Err(DomainError::EmptyLastName);
-        }
-
-        if age < 18 {
-            return Err(DomainError::UserTooYoung);
-        }
-
-        if age > 150 {
-            return Err(DomainError::InvalidAge);
-        }
+        let (first_name, last_name, age) =
+            Self::validate_and_normalize(first_name, last_name, age)?;
 
         self.first_name = first_name;
         self.last_name = last_name;

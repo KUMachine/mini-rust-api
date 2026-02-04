@@ -19,7 +19,7 @@ impl UpdateUserUseCase {
         user_id: i32,
         command: UpdateUserCommand,
     ) -> AppResult<UserResponse> {
-        let user_id = UserId::from_i32(user_id);
+        let user_id = UserId::from(user_id);
 
         // Find the user
         let mut user = self
