@@ -15,7 +15,7 @@ impl GetUserUseCase {
     }
 
     pub async fn execute(&self, user_id: i32) -> AppResult<UserResponse> {
-        let user_id = UserId::from_i32(user_id);
+        let user_id = UserId::from(user_id);
 
         let user = self
             .user_repository

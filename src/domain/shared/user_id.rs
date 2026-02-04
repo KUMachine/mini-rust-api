@@ -5,11 +5,6 @@ use serde::{Deserialize, Serialize};
 pub struct UserId(i32);
 
 impl UserId {
-    /// Create a new UserId from an existing database ID
-    pub fn from_i32(id: i32) -> Self {
-        Self(id)
-    }
-
     /// Get the inner i32 value
     pub fn value(&self) -> i32 {
         self.0

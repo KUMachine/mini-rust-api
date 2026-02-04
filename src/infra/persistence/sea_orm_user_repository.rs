@@ -31,7 +31,7 @@ impl SeaOrmUserRepository {
             .map_err(|e| RepositoryError::PersistenceFailure(format!("Invalid profile: {}", e)))?;
 
         Ok(User::reconstitute(
-            UserId::from_i32(model.id),
+            UserId::from(model.id),
             email,
             password,
             profile,
@@ -105,7 +105,7 @@ impl UserRepository for SeaOrmUserRepository {
                 .map_err(|e| RepositoryError::PersistenceFailure(e.to_string()))?;
 
             // Set the ID on the user entity
-            user.set_id(UserId::from_i32(inserted.id));
+            user.set_id(UserId::from(inserted.id));
         } else {
             // Update existing user
             let active_model = self.to_active_model_update(user);
