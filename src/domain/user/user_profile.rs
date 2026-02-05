@@ -1,8 +1,7 @@
 use super::errors::DomainError;
-use serde::{Deserialize, Serialize};
 
 /// UserProfile value object - encapsulates user profile information
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
 pub struct UserProfile {
     first_name: String,
     last_name: String,
