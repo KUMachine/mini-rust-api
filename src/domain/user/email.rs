@@ -1,11 +1,10 @@
 use std::fmt::Display;
 
 use super::errors::DomainError;
-use serde::{Deserialize, Serialize};
 use validator::ValidateEmail;
 
 /// Email value object - ensures email validity
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Email(String);
 
 impl TryFrom<String> for Email {

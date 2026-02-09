@@ -7,7 +7,6 @@ use axum::{Json, Router, extract::State, routing::post};
 use crate::app::ApplicationError;
 use crate::app::auth::{AuthToken, LoginCommand, RegisterCommand};
 use crate::app::user::UserResponse;
-use crate::presentation::extractors::ValidatedJson;
 use crate::presentation::responses::ApiResponse;
 use crate::presentation::state::AppState;
 
@@ -25,7 +24,7 @@ use crate::presentation::state::AppState;
 )]
 pub async fn login(
     State(state): State<AppState>,
-    ValidatedJson(command): ValidatedJson<LoginCommand>,
+    Json(command): Json<LoginCommand>,
 ) -> Result<Json<ApiResponse<AuthToken>>, ApplicationError> {
     let auth_token = state.login_use_case.execute(command).await?;
     Ok(Json(ApiResponse::ok(auth_token)))
@@ -45,7 +44,7 @@ pub async fn login(
 )]
 pub async fn register(
     State(state): State<AppState>,
-    ValidatedJson(command): ValidatedJson<RegisterCommand>,
+    Json(command): Json<RegisterCommand>,
 ) -> Result<Json<ApiResponse<UserResponse>>, ApplicationError> {
     let user = state.register_use_case.execute(command).await?;
     Ok(Json(ApiResponse::ok(user)))

@@ -1,7 +1,5 @@
-use serde::{Deserialize, Serialize};
-
 /// UserId value object - represents a unique user identifier
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug)]
 pub struct UserId(i32);
 
 impl UserId {
