@@ -34,5 +34,5 @@ validator = { version = "0.20.0", features = ["derive"] }
 thiserror = "2.0.18"
 chrono = "0.4.43"
 bcrypt = "0.18.0"
-jsonwebtoken = { version = "10.2.0", features = ["rust_crypto"] }
+jsonwebtoken = { version = "10.3.0", features = ["rust_crypto"] }
 async-trait = "0.1.89"
