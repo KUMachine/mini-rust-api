@@ -2,8 +2,7 @@ use std::fmt;
 use std::str::FromStr;
 
 /// User role - a fixed set of roles known at compile time
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-#[derive(Default)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Default)]
 pub enum Role {
     Admin,
     #[default]
@@ -19,7 +18,6 @@ impl Role {
         }
     }
 }
-
 
 impl fmt::Display for Role {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
