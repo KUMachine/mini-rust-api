@@ -1,9 +1,10 @@
 use super::{CreateUserCommand, UserResponse};
+use crate::app::caller_context::CallerContext;
 use crate::app::errors::{AppResult, ApplicationError};
 use crate::domain::user::{Email, User, UserRepository};
 use std::sync::Arc;
 
-/// CreateUserUseCase - handles creating a new user
+/// CreateUserUseCase - handles creating a new user (admin only)
 pub struct CreateUserUseCase {
     user_repository: Arc<dyn UserRepository>,
 }
@@ -13,7 +14,18 @@ impl CreateUserUseCase {
         Self { user_repository }
     }
 
-    pub async fn execute(&self, command: CreateUserCommand) -> AppResult<UserResponse> {
+    pub async fn execute(
+        &self,
+        command: CreateUserCommand,
+        caller: &CallerContext,
+    ) -> AppResult<UserResponse> {
+        // Authorization: only admins can create users via this endpoint
+        if !caller.is_admin() {
+            return Err(ApplicationError::Forbidden(
+                "Only administrators can create users".to_string(),
+            ));
+        }
+
         // Parse and validate email (domain validation)
         let email = Email::try_from(command.email.clone())?;
 

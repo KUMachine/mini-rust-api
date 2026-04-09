@@ -61,6 +61,7 @@ pub async fn create_app_state(config: Config) -> Result<AppState, BootstrapError
 
     Ok(AppState {
         config,
+        user_repository,
         login_use_case,
         register_use_case,
         create_user_use_case,

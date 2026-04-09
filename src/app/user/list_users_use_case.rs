@@ -1,5 +1,6 @@
 use super::{ListUsersQuery, UserResponse};
-use crate::app::errors::AppResult;
+use crate::app::caller_context::CallerContext;
+use crate::app::errors::{AppResult, ApplicationError};
 use crate::domain::user::UserRepository;
 use std::sync::Arc;
 
@@ -13,7 +14,18 @@ impl ListUsersUseCase {
         Self { user_repository }
     }
 
-    pub async fn execute(&self, query: ListUsersQuery) -> AppResult<(Vec<UserResponse>, u64)> {
+    pub async fn execute(
+        &self,
+        query: ListUsersQuery,
+        caller: &CallerContext,
+    ) -> AppResult<(Vec<UserResponse>, u64)> {
+        // Authorization: only admins can list all users
+        if !caller.is_admin() {
+            return Err(ApplicationError::Forbidden(
+                "Only administrators can list all users".to_string(),
+            ));
+        }
+
         let (users, total) = self
             .user_repository
             .list(query.page, query.rows_per_page)

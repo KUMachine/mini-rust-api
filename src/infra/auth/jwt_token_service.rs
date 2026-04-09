@@ -7,6 +7,9 @@ use serde::{Deserialize, Serialize};
 use std::sync::LazyLock;
 
 /// JWT Claims structure
+///
+/// Contains identity information only. Roles are looked up from the
+/// database per request to ensure they are always up-to-date.
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Claims {
     pub sub: String,  // Subject (user email)

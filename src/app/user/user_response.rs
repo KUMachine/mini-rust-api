@@ -11,6 +11,7 @@ pub struct UserResponse {
     pub last_name: String,
     pub age: u8,
     pub created_at: String,
+    pub roles: Vec<String>,
 }
 
 impl UserResponse {
@@ -23,6 +24,7 @@ impl UserResponse {
             last_name: user.profile().last_name().to_string(),
             age: user.profile().age(),
             created_at: user.created_at().to_string(),
+            roles: user.roles().iter().map(|r| r.to_string()).collect(),
         }
     }
 }

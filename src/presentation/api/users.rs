@@ -9,6 +9,7 @@ use axum::{
 };
 
 use crate::app::ApplicationError;
+use crate::app::CallerContext;
 use crate::app::user::{CreateUserCommand, ListUsersQuery, UpdateUserCommand, UserResponse};
 use crate::presentation::extractors::{ValidatedJson, ValidatedPagination};
 use crate::presentation::responses::{ApiErrorResponse, ApiResponse, PaginationRequest};
@@ -31,7 +32,8 @@ pub fn user_routes() -> Router<AppState> {
     ),
     responses(
         (status = 200, description = "List of users", body = ApiResponse<Vec<UserResponse>>),
-        (status = 401, description = "Unauthorized - Valid JWT token required")
+        (status = 401, description = "Unauthorized - Valid JWT token required"),
+        (status = 403, description = "Forbidden - Admin role required")
     ),
     security(
         ("bearer_auth" = [])
@@ -40,6 +42,7 @@ pub fn user_routes() -> Router<AppState> {
 )]
 pub async fn list_users(
     State(state): State<AppState>,
+    caller: CallerContext,
     ValidatedPagination(pagination): ValidatedPagination<PaginationRequest>,
 ) -> Result<Json<ApiResponse<Vec<UserResponse>>>, ApplicationError> {
     let page = pagination.page;
@@ -50,7 +53,7 @@ pub async fn list_users(
         rows_per_page: rows_per_page as u64,
     };
 
-    let (users, total) = state.list_users_use_case.execute(query).await?;
+    let (users, total) = state.list_users_use_case.execute(query, &caller).await?;
 
     Ok(Json(ApiResponse::with_pagination(
         users,
@@ -69,6 +72,7 @@ pub async fn list_users(
     ),
     responses(
         (status = 200, description = "User found", body = ApiResponse<UserResponse>),
+        (status = 403, description = "Forbidden - Can only view own profile unless admin"),
         (status = 404, description = "User not found"),
         (status = 401, description = "Unauthorized - Valid JWT token required")
     ),
@@ -79,9 +83,10 @@ pub async fn list_users(
 )]
 pub async fn get_user(
     State(state): State<AppState>,
+    caller: CallerContext,
     Path(id): Path<i32>,
 ) -> Result<Json<ApiResponse<UserResponse>>, ApplicationError> {
-    let user = state.get_user_use_case.execute(id).await?;
+    let user = state.get_user_use_case.execute(id, &caller).await?;
     Ok(Json(ApiResponse::ok(user)))
 }
 
@@ -93,7 +98,8 @@ pub async fn get_user(
     responses(
         (status = 200, description = "User created successfully", body = ApiResponse<UserResponse>),
         (status = 422, description = "Validation error", body = ApiErrorResponse),
-        (status = 401, description = "Unauthorized - Valid JWT token required")
+        (status = 401, description = "Unauthorized - Valid JWT token required"),
+        (status = 403, description = "Forbidden - Admin role required")
     ),
     security(
         ("bearer_auth" = [])
@@ -102,9 +108,10 @@ pub async fn get_user(
 )]
 pub async fn create_user(
     State(state): State<AppState>,
+    caller: CallerContext,
     ValidatedJson(command): ValidatedJson<CreateUserCommand>,
 ) -> Result<Json<ApiResponse<UserResponse>>, ApplicationError> {
-    let user = state.create_user_use_case.execute(command).await?;
+    let user = state.create_user_use_case.execute(command, &caller).await?;
     Ok(Json(ApiResponse::ok(user)))
 }
 
@@ -116,7 +123,8 @@ pub async fn create_user(
     responses(
         (status = 200, description = "User updated successfully", body = ApiResponse<UserResponse>),
         (status = 422, description = "Validation error", body = ApiErrorResponse),
-        (status = 401, description = "Unauthorized - Valid JWT token required")
+        (status = 401, description = "Unauthorized - Valid JWT token required"),
+        (status = 403, description = "Forbidden - Can only update own profile unless admin")
     ),
     security(
         ("bearer_auth" = [])
@@ -125,9 +133,13 @@ pub async fn create_user(
 )]
 pub async fn update_user(
     State(state): State<AppState>,
+    caller: CallerContext,
     Path(id): Path<i32>,
     ValidatedJson(command): ValidatedJson<UpdateUserCommand>,
 ) -> Result<Json<ApiResponse<UserResponse>>, ApplicationError> {
-    let user = state.update_user_use_case.execute(id, command).await?;
+    let user = state
+        .update_user_use_case
+        .execute(id, command, &caller)
+        .await?;
     Ok(Json(ApiResponse::ok(user)))
 }
