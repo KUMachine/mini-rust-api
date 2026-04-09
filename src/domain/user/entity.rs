@@ -1,4 +1,6 @@
-use super::{DomainError, Email, Password, UserProfile};
+use std::collections::HashSet;
+
+use super::{DomainError, Email, Password, Role, UserProfile};
 use crate::domain::shared::UserId;
 use chrono::NaiveDate;
 
@@ -10,10 +12,12 @@ pub struct User {
     password: Password,
     profile: UserProfile,
     created_at: NaiveDate,
+    roles: HashSet<Role>,
 }
 
 impl User {
     /// Register a new user (factory method)
+    /// New users default to the `User` role
     pub fn register(
         email: Email,
         raw_password: String,
@@ -30,6 +34,7 @@ impl User {
             password,
             profile,
             created_at: chrono::Utc::now().naive_utc().date(),
+            roles: HashSet::from([Role::User]),
         })
     }
 
@@ -41,6 +46,7 @@ impl User {
         password: Password,
         profile: UserProfile,
         created_at: NaiveDate,
+        roles: HashSet<Role>,
     ) -> Self {
         Self {
             id: Some(id),
@@ -48,6 +54,7 @@ impl User {
             password,
             profile,
             created_at,
+            roles,
         }
     }
 
@@ -112,6 +119,24 @@ impl User {
         self.created_at
     }
 
+    // Role accessors
+
+    pub fn roles(&self) -> &HashSet<Role> {
+        &self.roles
+    }
+
+    pub fn has_role(&self, role: &Role) -> bool {
+        self.roles.contains(role)
+    }
+
+    pub fn add_role(&mut self, role: Role) {
+        self.roles.insert(role);
+    }
+
+    pub fn remove_role(&mut self, role: &Role) {
+        self.roles.remove(role);
+    }
+
     /// Set the ID (used after persistence)
     pub(crate) fn set_id(&mut self, id: UserId) {
         self.id = Some(id);
@@ -127,6 +152,7 @@ impl std::fmt::Debug for User {
             .field("password", &"[REDACTED]")
             .field("profile", &self.profile)
             .field("created_at", &self.created_at)
+            .field("roles", &self.roles)
             .finish()
     }
 }

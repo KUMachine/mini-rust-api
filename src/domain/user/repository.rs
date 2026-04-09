@@ -1,6 +1,7 @@
-use super::{Email, User};
+use super::{Email, Role, User};
 use crate::domain::shared::UserId;
 use async_trait::async_trait;
+use std::collections::HashSet;
 use thiserror::Error;
 
 /// Repository errors
@@ -39,4 +40,7 @@ pub trait UserRepository: Send + Sync {
 
     /// List users with pagination
     async fn list(&self, page: u64, rows_per_page: u64) -> UserRepositoryResult<(Vec<User>, u64)>;
+
+    /// Find the roles assigned to a user by their ID
+    async fn find_roles_by_user_id(&self, id: UserId) -> UserRepositoryResult<HashSet<Role>>;
 }

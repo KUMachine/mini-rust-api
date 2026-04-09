@@ -31,6 +31,9 @@ pub enum ApplicationError {
     #[error("Unauthorized")]
     Unauthorized,
 
+    #[error("Forbidden: {0}")]
+    Forbidden(String),
+
     #[error("Validation error: {0}")]
     ValidationError(String),
 }

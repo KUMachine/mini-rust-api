@@ -65,6 +65,13 @@ impl IntoResponse for ApplicationError {
                     ApiErrorResponse::from_single_error(error),
                 )
             }
+            ApplicationError::Forbidden(msg) => {
+                let error = JsonApiError::new(403, "FORBIDDEN", "Forbidden").with_detail(msg);
+                (
+                    StatusCode::FORBIDDEN,
+                    ApiErrorResponse::from_single_error(error),
+                )
+            }
             ApplicationError::ValidationError(msg) => {
                 let error =
                     JsonApiError::new(422, "VALIDATION_ERROR", "Validation Error").with_detail(msg);

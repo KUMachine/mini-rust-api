@@ -1,4 +1,5 @@
 use super::{UpdateUserCommand, UserResponse};
+use crate::app::caller_context::CallerContext;
 use crate::app::errors::{AppResult, ApplicationError};
 use crate::domain::shared::UserId;
 use crate::domain::user::{Email, UserRepository};
@@ -18,7 +19,15 @@ impl UpdateUserUseCase {
         &self,
         user_id: i32,
         command: UpdateUserCommand,
+        caller: &CallerContext,
     ) -> AppResult<UserResponse> {
+        // Authorization: admin can update any user, regular users only their own
+        if !caller.can_access_user(user_id) {
+            return Err(ApplicationError::Forbidden(
+                "You can only update your own profile".to_string(),
+            ));
+        }
+
         let user_id = UserId::from(user_id);
 
         // Find the user

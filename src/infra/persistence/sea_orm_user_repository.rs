@@ -1,13 +1,17 @@
-use super::entities::users::{self, Entity as Users};
+use super::entities::roles::{self, Entity as RolesEntity};
+use super::entities::user_roles::{self, Entity as UserRolesEntity};
+use super::entities::users::{self, Entity as UsersEntity};
 use crate::domain::shared::UserId;
 use crate::domain::user::entity::User;
 use crate::domain::user::repository::{RepositoryError, UserRepository};
-use crate::domain::user::{Email, Password, UserProfile};
+use crate::domain::user::{Email, Password, Role, UserProfile};
 use async_trait::async_trait;
 use sea_orm::{
     ActiveModelTrait, ColumnTrait, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder,
     QuerySelect, Set,
 };
+use std::collections::HashSet;
+use std::str::FromStr;
 use std::sync::Arc;
 
 /// SeaORM implementation of UserRepository
@@ -20,8 +24,71 @@ impl SeaOrmUserRepository {
         Self { db }
     }
 
+    /// Load roles for a given user ID from the junction table
+    async fn load_roles(&self, user_id: i32) -> Result<HashSet<Role>, RepositoryError> {
+        let role_models = UserRolesEntity::find()
+            .filter(user_roles::Column::UserId.eq(user_id))
+            .find_also_related(RolesEntity)
+            .all(self.db.as_ref())
+            .await
+            .map_err(|e| RepositoryError::PersistenceFailure(e.to_string()))?;
+
+        let mut roles = HashSet::new();
+        for (_user_role, role_opt) in role_models {
+            if let Some(role_model) = role_opt {
+                if let Ok(role) = Role::from_str(&role_model.name) {
+                    roles.insert(role);
+                }
+            }
+        }
+
+        Ok(roles)
+    }
+
+    /// Save roles for a user by syncing the junction table
+    async fn save_roles(&self, user_id: i32, roles: &HashSet<Role>) -> Result<(), RepositoryError> {
+        // Delete existing role assignments
+        UserRolesEntity::delete_many()
+            .filter(user_roles::Column::UserId.eq(user_id))
+            .exec(self.db.as_ref())
+            .await
+            .map_err(|e| RepositoryError::PersistenceFailure(e.to_string()))?;
+
+        // Insert new role assignments
+        for role in roles {
+            let role_name = role.to_string();
+
+            // Look up the role ID by name
+            let role_model = RolesEntity::find()
+                .filter(roles::Column::Name.eq(&role_name))
+                .one(self.db.as_ref())
+                .await
+                .map_err(|e| RepositoryError::PersistenceFailure(e.to_string()))?
+                .ok_or_else(|| {
+                    RepositoryError::PersistenceFailure(format!(
+                        "Role '{}' not found in database",
+                        role_name
+                    ))
+                })?;
+
+            let user_role = user_roles::ActiveModel {
+                user_id: Set(user_id),
+                role_id: Set(role_model.id),
+            };
+
+            user_role
+                .insert(self.db.as_ref())
+                .await
+                .map_err(|e| RepositoryError::PersistenceFailure(e.to_string()))?;
+        }
+
+        Ok(())
+    }
+
     /// Convert SeaORM model to domain User entity
-    fn to_domain(&self, model: users::Model) -> Result<User, RepositoryError> {
+    async fn to_domain(&self, model: users::Model) -> Result<User, RepositoryError> {
+        let user_id = model.id;
+
         let email = Email::try_from(model.email)
             .map_err(|e| RepositoryError::PersistenceFailure(format!("Invalid email: {}", e)))?;
 
@@ -30,12 +97,15 @@ impl SeaOrmUserRepository {
         let profile = UserProfile::new(model.first_name, model.last_name, model.age as u8)
             .map_err(|e| RepositoryError::PersistenceFailure(format!("Invalid profile: {}", e)))?;
 
+        let roles = self.load_roles(user_id).await?;
+
         Ok(User::reconstitute(
-            UserId::from(model.id),
+            UserId::from(user_id),
             email,
             password,
             profile,
             model.create_at,
+            roles,
         ))
     }
 
@@ -71,26 +141,26 @@ impl SeaOrmUserRepository {
 #[async_trait]
 impl UserRepository for SeaOrmUserRepository {
     async fn find_by_id(&self, id: UserId) -> Result<Option<User>, RepositoryError> {
-        let model = Users::find_by_id(id.value())
+        let model = UsersEntity::find_by_id(id.value())
             .one(self.db.as_ref())
             .await
             .map_err(|e| RepositoryError::PersistenceFailure(e.to_string()))?;
 
         match model {
-            Some(m) => Ok(Some(self.to_domain(m)?)),
+            Some(m) => Ok(Some(self.to_domain(m).await?)),
             None => Ok(None),
         }
     }
 
     async fn find_by_email(&self, email: &Email) -> Result<Option<User>, RepositoryError> {
-        let model = Users::find()
+        let model = UsersEntity::find()
             .filter(users::Column::Email.eq(email.to_string()))
             .one(self.db.as_ref())
             .await
             .map_err(|e| RepositoryError::PersistenceFailure(e.to_string()))?;
 
         match model {
-            Some(m) => Ok(Some(self.to_domain(m)?)),
+            Some(m) => Ok(Some(self.to_domain(m).await?)),
             None => Ok(None),
         }
     }
@@ -105,7 +175,11 @@ impl UserRepository for SeaOrmUserRepository {
                 .map_err(|e| RepositoryError::PersistenceFailure(e.to_string()))?;
 
             // Set the ID on the user entity
-            user.set_id(UserId::from(inserted.id));
+            let user_id = inserted.id;
+            user.set_id(UserId::from(user_id));
+
+            // Save roles for the new user
+            self.save_roles(user_id, user.roles()).await?;
         } else {
             // Update existing user
             let active_model = self.to_active_model_update(user);
@@ -113,13 +187,17 @@ impl UserRepository for SeaOrmUserRepository {
                 .update(self.db.as_ref())
                 .await
                 .map_err(|e| RepositoryError::PersistenceFailure(e.to_string()))?;
+
+            // Sync roles
+            let user_id = user.id().unwrap().value();
+            self.save_roles(user_id, user.roles()).await?;
         }
 
         Ok(())
     }
 
     async fn exists_with_email(&self, email: &Email) -> Result<bool, RepositoryError> {
-        let exists = Users::find()
+        let exists = UsersEntity::find()
             .filter(users::Column::Email.eq(email.to_string()))
             .one(self.db.as_ref())
             .await
@@ -136,7 +214,7 @@ impl UserRepository for SeaOrmUserRepository {
     ) -> Result<(Vec<User>, u64), RepositoryError> {
         let offset = (page.saturating_sub(1)) * rows_per_page;
 
-        let models = Users::find()
+        let models = UsersEntity::find()
             .order_by_desc(users::Column::Id)
             .offset(offset)
             .limit(rows_per_page)
@@ -144,14 +222,20 @@ impl UserRepository for SeaOrmUserRepository {
             .await
             .map_err(|e| RepositoryError::PersistenceFailure(e.to_string()))?;
 
-        let total = Users::find()
+        let total = UsersEntity::find()
             .count(self.db.as_ref())
             .await
             .map_err(|e| RepositoryError::PersistenceFailure(e.to_string()))?;
 
-        let users: Result<Vec<User>, RepositoryError> =
-            models.into_iter().map(|m| self.to_domain(m)).collect();
+        let mut users = Vec::with_capacity(models.len());
+        for model in models {
+            users.push(self.to_domain(model).await?);
+        }
 
-        Ok((users?, total))
+        Ok((users, total))
+    }
+
+    async fn find_roles_by_user_id(&self, id: UserId) -> Result<HashSet<Role>, RepositoryError> {
+        self.load_roles(id.value()).await
     }
 }

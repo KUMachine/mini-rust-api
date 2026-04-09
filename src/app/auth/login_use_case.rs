@@ -36,7 +36,7 @@ impl LoginUseCase {
         user.authenticate(&command.password)
             .map_err(|_| ApplicationError::InvalidCredentials)?;
 
-        // Infrastructure concern: generate token
+        // Infrastructure concern: generate token (identity only, no roles)
         let token = self
             .token_service
             .generate_token(
