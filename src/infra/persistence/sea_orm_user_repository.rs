@@ -35,11 +35,10 @@ impl SeaOrmUserRepository {
 
         let mut roles = HashSet::new();
         for (_user_role, role_opt) in role_models {
-            if let Some(role_model) = role_opt {
-                if let Ok(role) = Role::from_str(&role_model.name) {
+            if let Some(role_model) = role_opt
+                && let Ok(role) = Role::from_str(&role_model.name) {
                     roles.insert(role);
                 }
-            }
         }
 
         Ok(roles)

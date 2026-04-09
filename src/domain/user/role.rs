@@ -3,8 +3,10 @@ use std::str::FromStr;
 
 /// User role - a fixed set of roles known at compile time
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Default)]
 pub enum Role {
     Admin,
+    #[default]
     User,
 }
 
@@ -18,11 +20,6 @@ impl Role {
     }
 }
 
-impl Default for Role {
-    fn default() -> Self {
-        Self::User
-    }
-}
 
 impl fmt::Display for Role {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
