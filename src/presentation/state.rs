@@ -8,6 +8,7 @@ use crate::app::auth::{LoginUseCase, RegisterUseCase};
 use crate::app::user::{CreateUserUseCase, GetUserUseCase, ListUsersUseCase, UpdateUserUseCase};
 use crate::domain::user::UserRepository;
 use crate::infra::Config;
+use crate::infra::auth::JwtTokenService;
 use std::sync::Arc;
 
 /// Shared application state
@@ -19,6 +20,8 @@ pub struct AppState {
     pub config: Config,
     // Repository (domain trait) - used by auth middleware for role lookups
     pub user_repository: Arc<dyn UserRepository>,
+    // Token service - used by auth middleware for JWT decoding
+    pub jwt_token_service: Arc<JwtTokenService>,
     // Auth use cases
     pub login_use_case: Arc<LoginUseCase>,
     pub register_use_case: Arc<RegisterUseCase>,

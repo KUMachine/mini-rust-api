@@ -14,18 +14,14 @@ use crate::infra::auth::JwtTokenService;
 use crate::infra::config::{self, Config};
 use crate::infra::persistence::SeaOrmUserRepository;
 use crate::presentation::AppState;
+use thiserror::Error;
 
 /// Bootstrap error type
-#[derive(Debug)]
-pub struct BootstrapError(pub String);
-
-impl std::fmt::Display for BootstrapError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Bootstrap error: {}", self.0)
-    }
+#[derive(Debug, Error)]
+pub enum BootstrapError {
+    #[error("failed to connect to database")]
+    Database(#[source] sea_orm::DbErr),
 }
-
-impl std::error::Error for BootstrapError {}
 
 /// Bootstrap the application and return the configured AppState
 ///
@@ -37,16 +33,17 @@ impl std::error::Error for BootstrapError {}
 pub async fn create_app_state(config: Config) -> Result<AppState, BootstrapError> {
     // Infrastructure layer: Database connection (internal to bootstrap)
     let db = Arc::new(
-        config::database::connect()
+        config::database::connect(&config)
             .await
-            .map_err(|e| BootstrapError(format!("Failed to connect to database: {}", e)))?,
+            .map_err(BootstrapError::Database)?,
     );
 
     // Infrastructure layer: Create repository implementation
     let user_repository: Arc<dyn UserRepository> = Arc::new(SeaOrmUserRepository::new(db));
 
     // Infrastructure layer: Create token service
-    let token_service: Arc<dyn TokenService> = Arc::new(JwtTokenService::new());
+    let jwt_token_service = Arc::new(JwtTokenService::new(config.auth.jwt_secret.as_bytes()));
+    let token_service: Arc<dyn TokenService> = jwt_token_service.clone();
 
     // Application layer: Create use cases
     let login_use_case = Arc::new(LoginUseCase::new(
@@ -62,6 +59,7 @@ pub async fn create_app_state(config: Config) -> Result<AppState, BootstrapError
     Ok(AppState {
         config,
         user_repository,
+        jwt_token_service,
         login_use_case,
         register_use_case,
         create_user_use_case,

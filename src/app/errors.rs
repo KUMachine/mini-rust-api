@@ -10,32 +10,35 @@ use thiserror::Error;
 /// Application layer errors
 #[derive(Error, Debug)]
 pub enum ApplicationError {
-    #[error("Domain error: {0}")]
+    #[error("domain error: {0}")]
     DomainError(#[from] DomainError),
 
-    #[error("Repository error: {0}")]
+    #[error("repository error: {0}")]
     RepositoryError(#[from] RepositoryError),
 
-    #[error("User not found")]
+    #[error("user not found")]
     UserNotFound,
 
-    #[error("Invalid credentials")]
+    #[error("invalid credentials")]
     InvalidCredentials,
 
-    #[error("User with email {0} already exists")]
+    #[error("user with email {0} already exists")]
     EmailAlreadyExists(String),
 
-    #[error("Token generation failed: {0}")]
+    #[error("token generation failed: {0}")]
     TokenGenerationFailed(String),
 
-    #[error("Unauthorized")]
+    #[error("unauthorized")]
     Unauthorized,
 
-    #[error("Forbidden: {0}")]
+    #[error("forbidden: {0}")]
     Forbidden(String),
 
-    #[error("Validation error: {0}")]
+    #[error("validation error: {0}")]
     ValidationError(String),
+
+    #[error("persisted user is missing an id")]
+    MissingUserId,
 }
 
 /// Type alias for application results

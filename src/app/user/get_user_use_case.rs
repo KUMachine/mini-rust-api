@@ -31,6 +31,6 @@ impl GetUserUseCase {
             .await?
             .ok_or(ApplicationError::UserNotFound)?;
 
-        Ok(UserResponse::from_domain(&user))
+        UserResponse::try_from_domain(&user)
     }
 }

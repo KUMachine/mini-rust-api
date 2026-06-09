@@ -7,7 +7,7 @@
 use super::super::state::AppState;
 use crate::app::CallerContext;
 use crate::domain::shared::UserId;
-use crate::infra::auth::jwt_token_service::{Claims, JwtTokenService};
+use crate::infra::auth::jwt_token_service::Claims;
 use axum::{
     RequestPartsExt,
     extract::{Request, State},
@@ -19,7 +19,7 @@ use axum_extra::{
     TypedHeader,
     headers::{Authorization, authorization::Bearer},
 };
-use jsonwebtoken::{Validation, decode};
+use jsonwebtoken::{DecodingKey, Validation, decode};
 
 /// Authentication middleware that validates JWT tokens and builds CallerContext
 ///
@@ -34,7 +34,7 @@ pub async fn auth_middleware(
     let (mut parts, body) = req.into_parts();
 
     // Extract and validate the JWT token
-    let claims = extract_claims(&mut parts).await?;
+    let claims = extract_claims(&mut parts, state.jwt_token_service.decoding_key()).await?;
 
     // Look up current roles from the database
     let roles = state
@@ -52,18 +52,17 @@ pub async fn auth_middleware(
 }
 
 /// Extract and validate JWT claims from the request
-async fn extract_claims(parts: &mut Parts) -> Result<Claims, StatusCode> {
+async fn extract_claims(
+    parts: &mut Parts,
+    decoding_key: &DecodingKey,
+) -> Result<Claims, StatusCode> {
     let TypedHeader(Authorization(bearer)) = parts
         .extract::<TypedHeader<Authorization<Bearer>>>()
         .await
         .map_err(|_| StatusCode::UNAUTHORIZED)?;
 
-    let token_data = decode::<Claims>(
-        bearer.token(),
-        JwtTokenService::get_decoding_key(),
-        &Validation::default(),
-    )
-    .map_err(|_| StatusCode::UNAUTHORIZED)?;
+    let token_data = decode::<Claims>(bearer.token(), decoding_key, &Validation::default())
+        .map_err(|_| StatusCode::UNAUTHORIZED)?;
 
     Ok(token_data.claims)
 }
