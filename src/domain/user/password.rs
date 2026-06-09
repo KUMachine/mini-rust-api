@@ -9,9 +9,11 @@ pub struct Password {
 
 impl Password {
     /// Create a new Password by hashing a raw password
-    pub fn hash(raw: String) -> Result<Self, DomainError> {
+    pub fn hash(raw: impl AsRef<str>) -> Result<Self, DomainError> {
+        let raw = raw.as_ref();
+
         // Validate password strength
-        Self::validate_strength(&raw)?;
+        Self::validate_strength(raw)?;
 
         let hashed = hash(raw, DEFAULT_COST).map_err(|_| DomainError::PasswordHashingFailed)?;
 
@@ -65,27 +67,27 @@ mod tests {
     #[test]
     fn test_password_hashing() {
         let raw = "SecurePass123".to_string();
-        let password = Password::hash(raw.clone()).unwrap();
+        let password = Password::hash(&raw).unwrap();
         assert!(password.verify(&raw));
         assert!(!password.verify("WrongPassword"));
     }
 
     #[test]
     fn test_password_too_short() {
-        let result = Password::hash("Short1".to_string());
+        let result = Password::hash("Short1");
         assert!(matches!(result, Err(DomainError::PasswordTooShort)));
     }
 
     #[test]
     fn test_password_too_weak() {
-        let result = Password::hash("alllowercase".to_string());
+        let result = Password::hash("alllowercase");
         assert!(matches!(result, Err(DomainError::PasswordTooWeak)));
     }
 
     #[test]
     fn test_password_from_hash() {
         let raw = "ValidPass123".to_string();
-        let password = Password::hash(raw.clone()).unwrap();
+        let password = Password::hash(&raw).unwrap();
         let hash_string = password.hashed().to_string();
 
         let password_from_hash = Password::from_hash(hash_string);

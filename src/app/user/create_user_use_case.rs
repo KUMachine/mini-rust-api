@@ -27,7 +27,7 @@ impl CreateUserUseCase {
         }
 
         // Parse and validate email (domain validation)
-        let email = Email::try_from(command.email.clone())?;
+        let email = Email::try_from(command.email.as_str())?;
 
         // Check if user already exists
         if self.user_repository.exists_with_email(&email).await? {
@@ -47,6 +47,6 @@ impl CreateUserUseCase {
         self.user_repository.save(&mut user).await?;
 
         // Convert to response DTO
-        Ok(UserResponse::from_domain(&user))
+        UserResponse::try_from_domain(&user)
     }
 }

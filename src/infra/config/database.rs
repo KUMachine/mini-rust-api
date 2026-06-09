@@ -18,6 +18,7 @@ pub struct DatabaseConfig {
 
 impl DatabaseConfig {
     /// Create a new database configuration with the given URL
+    #[must_use]
     pub fn new(url: String) -> Self {
         Self {
             url,
@@ -30,30 +31,35 @@ impl DatabaseConfig {
     }
 
     /// Set the maximum number of connections
+    #[must_use]
     pub fn max_connections(mut self, max: u32) -> Self {
         self.max_connections = max;
         self
     }
 
     /// Set the minimum number of connections
+    #[must_use]
     pub fn min_connections(mut self, min: u32) -> Self {
         self.min_connections = min;
         self
     }
 
     /// Set the connection timeout
+    #[must_use]
     pub fn connect_timeout(mut self, timeout: Duration) -> Self {
         self.connect_timeout = timeout;
         self
     }
 
     /// Set the idle timeout
+    #[must_use]
     pub fn idle_timeout(mut self, timeout: Duration) -> Self {
         self.idle_timeout = timeout;
         self
     }
 
     /// Set the maximum connection lifetime
+    #[must_use]
     pub fn max_lifetime(mut self, lifetime: Duration) -> Self {
         self.max_lifetime = lifetime;
         self
@@ -73,9 +79,7 @@ impl DatabaseConfig {
 }
 
 /// Connect to the database using environment configuration
-pub async fn connect() -> Result<DbConn, DbErr> {
-    let config = Config::from_env();
-
+pub async fn connect(config: &Config) -> Result<DbConn, DbErr> {
     DatabaseConfig::new(config.database.build_url())
         .max_connections(100)
         .min_connections(5)

@@ -66,7 +66,7 @@ impl SeaOrmUserRepository {
                 .map_err(|e| RepositoryError::PersistenceFailure(e.to_string()))?
                 .ok_or_else(|| {
                     RepositoryError::PersistenceFailure(format!(
-                        "Role '{}' not found in database",
+                        "role '{}' not found in database",
                         role_name
                     ))
                 })?;
@@ -90,12 +90,12 @@ impl SeaOrmUserRepository {
         let user_id = model.id;
 
         let email = Email::try_from(model.email)
-            .map_err(|e| RepositoryError::PersistenceFailure(format!("Invalid email: {}", e)))?;
+            .map_err(|e| RepositoryError::PersistenceFailure(format!("invalid email: {}", e)))?;
 
         let password = Password::from_hash(model.password_hash);
 
         let profile = UserProfile::new(model.first_name, model.last_name, model.age as u8)
-            .map_err(|e| RepositoryError::PersistenceFailure(format!("Invalid profile: {}", e)))?;
+            .map_err(|e| RepositoryError::PersistenceFailure(format!("invalid profile: {}", e)))?;
 
         let roles = self.load_roles(user_id).await?;
 
@@ -123,11 +123,9 @@ impl SeaOrmUserRepository {
     }
 
     /// Convert domain User to SeaORM ActiveModel for update
-    fn to_active_model_update(&self, user: &User) -> users::ActiveModel {
-        let id = user.id().expect("User must have an ID to update").value();
-
+    fn to_active_model_update(&self, user: &User, id: UserId) -> users::ActiveModel {
         users::ActiveModel {
-            id: Set(id),
+            id: Set(id.value()),
             email: Set(user.email().to_string()),
             password_hash: Set(user.password().hashed().to_string()),
             first_name: Set(user.profile().first_name().to_string()),
@@ -166,31 +164,33 @@ impl UserRepository for SeaOrmUserRepository {
     }
 
     async fn save(&self, user: &mut User) -> Result<(), RepositoryError> {
-        if user.id().is_none() {
-            // Insert new user
-            let active_model = self.to_active_model_insert(user);
-            let inserted = active_model
-                .insert(self.db.as_ref())
-                .await
-                .map_err(|e| RepositoryError::PersistenceFailure(e.to_string()))?;
+        match user.id() {
+            None => {
+                // Insert new user
+                let active_model = self.to_active_model_insert(user);
+                let inserted = active_model
+                    .insert(self.db.as_ref())
+                    .await
+                    .map_err(|e| RepositoryError::PersistenceFailure(e.to_string()))?;
 
-            // Set the ID on the user entity
-            let user_id = inserted.id;
-            user.set_id(UserId::from(user_id));
+                // Set the ID on the user entity
+                let user_id = inserted.id;
+                user.set_id(UserId::from(user_id));
 
-            // Save roles for the new user
-            self.save_roles(user_id, user.roles()).await?;
-        } else {
-            // Update existing user
-            let active_model = self.to_active_model_update(user);
-            active_model
-                .update(self.db.as_ref())
-                .await
-                .map_err(|e| RepositoryError::PersistenceFailure(e.to_string()))?;
+                // Save roles for the new user
+                self.save_roles(user_id, user.roles()).await?;
+            }
+            Some(user_id) => {
+                // Update existing user
+                let active_model = self.to_active_model_update(user, user_id);
+                active_model
+                    .update(self.db.as_ref())
+                    .await
+                    .map_err(|e| RepositoryError::PersistenceFailure(e.to_string()))?;
 
-            // Sync roles
-            let user_id = user.id().unwrap().value();
-            self.save_roles(user_id, user.roles()).await?;
+                // Sync roles
+                self.save_roles(user_id.value(), user.roles()).await?;
+            }
         }
 
         Ok(())

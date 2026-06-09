@@ -31,8 +31,10 @@ impl ListUsersUseCase {
             .list(query.page, query.rows_per_page)
             .await?;
 
-        let user_responses: Vec<UserResponse> =
-            users.iter().map(UserResponse::from_domain).collect();
+        let user_responses = users
+            .iter()
+            .map(UserResponse::try_from_domain)
+            .collect::<AppResult<Vec<_>>>()?;
 
         Ok((user_responses, total))
     }

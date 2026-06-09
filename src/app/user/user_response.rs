@@ -1,3 +1,4 @@
+use crate::app::errors::{AppResult, ApplicationError};
 use crate::domain::user::User;
 use serde::Serialize;
 use utoipa::ToSchema;
@@ -16,15 +17,17 @@ pub struct UserResponse {
 
 impl UserResponse {
     /// Convert from domain User entity
-    pub fn from_domain(user: &User) -> Self {
-        Self {
-            id: user.id().expect("User must have an ID").value(),
+    pub fn try_from_domain(user: &User) -> AppResult<Self> {
+        let id = user.id().ok_or(ApplicationError::MissingUserId)?;
+
+        Ok(Self {
+            id: id.value(),
             email: user.email().as_ref().to_string(),
             first_name: user.profile().first_name().to_string(),
             last_name: user.profile().last_name().to_string(),
             age: user.profile().age(),
             created_at: user.created_at().to_string(),
             roles: user.roles().iter().map(|r| r.to_string()).collect(),
-        }
+        })
     }
 }

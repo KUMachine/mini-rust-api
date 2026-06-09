@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use chrono::{Duration, Utc};
 use jsonwebtoken::{DecodingKey, EncodingKey, Header, encode};
 use serde::{Deserialize, Serialize};
-use std::sync::LazyLock;
+use std::sync::Arc;
 
 /// JWT Claims structure
 ///
@@ -32,27 +32,22 @@ impl Keys {
     }
 }
 
-static KEYS: LazyLock<Keys> = LazyLock::new(|| {
-    let secret = std::env::var("JWT_SECRET").expect("JWT_SECRET must be set");
-    Keys::new(secret.as_bytes())
-});
-
 /// JWT implementation of TokenService
-pub struct JwtTokenService;
-
-impl JwtTokenService {
-    pub fn new() -> Self {
-        Self
-    }
-
-    pub fn get_decoding_key() -> &'static DecodingKey {
-        &KEYS.decoding
-    }
+pub struct JwtTokenService {
+    keys: Arc<Keys>,
 }
 
-impl Default for JwtTokenService {
-    fn default() -> Self {
-        Self::new()
+impl JwtTokenService {
+    #[must_use]
+    pub fn new(secret: impl AsRef<[u8]>) -> Self {
+        Self {
+            keys: Arc::new(Keys::new(secret.as_ref())),
+        }
+    }
+
+    #[must_use]
+    pub fn decoding_key(&self) -> &DecodingKey {
+        &self.keys.decoding
     }
 }
 
@@ -70,7 +65,7 @@ impl TokenService for JwtTokenService {
             exp,
         };
 
-        encode(&Header::default(), &claims, &KEYS.encoding)
+        encode(&Header::default(), &claims, &self.keys.encoding)
             .map_err(|e| ApplicationError::TokenGenerationFailed(e.to_string()))
     }
 }

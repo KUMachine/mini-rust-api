@@ -50,6 +50,6 @@ impl UpdateUserUseCase {
         self.user_repository.save(&mut user).await?;
 
         // Convert to response DTO
-        Ok(UserResponse::from_domain(&user))
+        UserResponse::try_from_domain(&user)
     }
 }

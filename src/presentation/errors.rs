@@ -80,6 +80,14 @@ impl IntoResponse for ApplicationError {
                     ApiErrorResponse::from_single_error(error),
                 )
             }
+            ApplicationError::MissingUserId => {
+                let error = JsonApiError::new(500, "MISSING_USER_ID", "Missing User ID")
+                    .with_detail("A persisted user was missing its database ID");
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    ApiErrorResponse::from_single_error(error),
+                )
+            }
         };
 
         let body = Json(api_error);

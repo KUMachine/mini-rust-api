@@ -7,17 +7,31 @@ use validator::ValidateEmail;
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Email(String);
 
+impl Email {
+    fn parse(value: &str) -> Result<Self, DomainError> {
+        let trimmed = value.trim().to_lowercase();
+
+        if !ValidateEmail::validate_email(&trimmed) {
+            return Err(DomainError::InvalidEmail(value.to_string()));
+        }
+
+        Ok(Self(trimmed))
+    }
+}
+
 impl TryFrom<String> for Email {
     type Error = DomainError;
 
     fn try_from(value: String) -> Result<Self, Self::Error> {
-        let trimmed = value.trim().to_lowercase();
+        Self::parse(&value)
+    }
+}
 
-        if !ValidateEmail::validate_email(&trimmed) {
-            return Err(DomainError::InvalidEmail(value));
-        }
+impl TryFrom<&str> for Email {
+    type Error = DomainError;
 
-        Ok(Self(trimmed))
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        Self::parse(value)
     }
 }
 

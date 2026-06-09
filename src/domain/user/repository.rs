@@ -10,13 +10,13 @@ use thiserror::Error;
 /// storage mechanisms like databases, files, or APIs.
 #[derive(Error, Debug)]
 pub enum RepositoryError {
-    #[error("Persistence failure: {0}")]
+    #[error("persistence failure: {0}")]
     PersistenceFailure(String),
 
-    #[error("Entity not found")]
+    #[error("entity not found")]
     NotFound,
 
-    #[error("Unexpected error: {0}")]
+    #[error("unexpected error: {0}")]
     Unexpected(String),
 }
 
