@@ -48,7 +48,7 @@ impl MigrationTrait for Migration {
             "INSERT INTO user_roles (user_id, role_id) SELECT u.id, r.id FROM users u, roles r WHERE r.name = 'user'"
                 .to_string(),
         );
-        manager.get_connection().execute(stmt).await?;
+        manager.get_connection().execute_raw(stmt).await?;
 
         Ok(())
     }

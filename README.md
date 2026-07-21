@@ -43,7 +43,7 @@ src/
 
 ## Documentation
 
-For detailed architecture documentation, development patterns, and AI-assisted development guidance, see **[CLAUDE.md](./CLAUDE.md)**.
+For detailed architecture documentation, development patterns, and AI-assisted development guidance, see **[AGENTS.md](./AGENTS.md)**.
 
 ## License
 
