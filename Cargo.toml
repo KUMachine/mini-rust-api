@@ -35,7 +35,7 @@ thiserror = "2.0.21"
 chrono = "0.4.45"
 bcrypt = "0.19.2"
 jsonwebtoken = { version = "10.4.0", features = ["rust_crypto"] }
-async-trait = "0.1.91"
+async-trait = "0.1.92"
 
 [dev-dependencies]
 sea-orm = { version = "2.0.0", features = ["mock"] }
