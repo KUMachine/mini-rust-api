@@ -49,14 +49,7 @@ presentation  →  app  →  domain  ←  infra
 
 ## Adding a Feature
 
-Work inside-out, one layer at a time:
-
-1. **domain/**: entity/value objects with validation, repository trait, domain errors.
-2. **app/**: use case(s) taking a command DTO plus `&CallerContext` when access is restricted; add ports for new infrastructure.
-3. **infra/**: SeaORM entity + repository implementation, plus an in-memory implementation for tests.
-4. **presentation/**: handler with `#[utoipa::path]` documenting every status it can return, the route in `api/`, and registration in `openapi/mod.rs`. Map new error variants in `presentation/errors.rs`.
-5. **bootstrap.rs + state.rs**: construct the use case in `build_app_state` and add it to `AppState`.
-6. **migration/**: `cargo run -- generate NAME`, then register it in `migration/src/lib.rs`.
+To add a resource, endpoint, use case or entity, follow the `add-feature` skill: `.agents/skills/add-feature/SKILL.md`. It walks the layers inside-out with the User feature as the reference implementation, and defines when the work is done.
 
 ## Testing
 
