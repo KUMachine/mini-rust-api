@@ -3,6 +3,7 @@ use mini_rust_api::infra::{Config, ConfigError};
 use mini_rust_api::presentation::create_router;
 use mini_rust_api::presentation::middleware::{CorsLayerError, cors_layer};
 use thiserror::Error;
+use tracing_subscriber::EnvFilter;
 
 #[derive(Debug, Error)]
 enum MainError {
@@ -28,7 +29,12 @@ enum MainError {
 
 #[tokio::main]
 async fn main() -> Result<(), MainError> {
-    tracing_subscriber::fmt::init();
+    tracing_subscriber::fmt()
+        .with_env_filter(
+            EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| EnvFilter::new("info,sqlx=warn,tower_http=debug")),
+        )
+        .init();
 
     let config = Config::from_env()?;
 
@@ -54,7 +60,45 @@ async fn main() -> Result<(), MainError> {
         config.server.port
     );
 
-    axum::serve(listener, app).await.map_err(MainError::Serve)?;
+    axum::serve(listener, app)
+        .with_graceful_shutdown(shutdown_signal())
+        .await
+        .map_err(MainError::Serve)?;
+
+    tracing::info!("Server stopped");
 
     Ok(())
+}
+
+/// Resolve when the process receives Ctrl+C or SIGTERM
+async fn shutdown_signal() {
+    let ctrl_c = async {
+        if let Err(error) = tokio::signal::ctrl_c().await {
+            tracing::error!(%error, "failed to listen for Ctrl+C");
+            std::future::pending::<()>().await;
+        }
+    };
+
+    #[cfg(unix)]
+    let terminate = async {
+        match tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate()) {
+            Ok(mut signal) => {
+                signal.recv().await;
+            }
+            Err(error) => {
+                tracing::error!(%error, "failed to listen for SIGTERM");
+                std::future::pending::<()>().await;
+            }
+        }
+    };
+
+    #[cfg(not(unix))]
+    let terminate = std::future::pending::<()>();
+
+    tokio::select! {
+        () = ctrl_c => {},
+        () = terminate => {},
+    }
+
+    tracing::info!("Shutdown signal received, draining connections");
 }

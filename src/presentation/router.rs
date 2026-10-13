@@ -3,6 +3,7 @@
 //! Assembles all routes, documentation and route-level middleware.
 
 use axum::{Router, middleware};
+use tower_http::trace::TraceLayer;
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
@@ -21,5 +22,6 @@ pub fn create_router(state: AppState) -> Router {
             state.clone(),
             auth_middleware,
         )))
+        .layer(TraceLayer::new_for_http())
         .with_state(state)
 }
