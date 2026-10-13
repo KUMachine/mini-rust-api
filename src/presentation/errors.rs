@@ -12,172 +12,169 @@ use crate::domain::user::errors::DomainError;
 
 use super::responses::{ApiErrorResponse, JsonApiError};
 
+/// Detail returned for server-side failures; the real cause is logged, not exposed
+const INTERNAL_ERROR_DETAIL: &str = "An internal error occurred";
+
 impl IntoResponse for ApplicationError {
     fn into_response(self) -> Response {
-        let (status, api_error) = match self {
-            ApplicationError::DomainError(domain_err) => domain_error_to_response(domain_err),
-            ApplicationError::RepositoryError(repo_err) => {
-                let error = JsonApiError::new(500, "PERSISTENCE_ERROR", "Persistence Error")
-                    .with_detail(format!("A persistence error occurred: {}", repo_err));
+        use StatusCode as S;
+
+        let (status, code, title, detail) = match self {
+            ApplicationError::DomainError(err) => return domain_error_response(err),
+            ApplicationError::RepositoryError(err) => {
+                tracing::error!(error = %err, "repository error");
                 (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    ApiErrorResponse::from_single_error(error),
+                    S::INTERNAL_SERVER_ERROR,
+                    "PERSISTENCE_ERROR",
+                    "Persistence Error",
+                    INTERNAL_ERROR_DETAIL.to_string(),
                 )
             }
-            ApplicationError::UserNotFound => {
-                let error = JsonApiError::new(404, "USER_NOT_FOUND", "User Not Found")
-                    .with_detail("The requested user was not found");
-                (
-                    StatusCode::NOT_FOUND,
-                    ApiErrorResponse::from_single_error(error),
-                )
-            }
-            ApplicationError::InvalidCredentials => {
-                let error = JsonApiError::new(401, "INVALID_CREDENTIALS", "Invalid Credentials")
-                    .with_detail("The provided credentials are incorrect");
-                (
-                    StatusCode::UNAUTHORIZED,
-                    ApiErrorResponse::from_single_error(error),
-                )
-            }
-            ApplicationError::EmailAlreadyExists(email) => {
-                let error = JsonApiError::new(409, "EMAIL_ALREADY_EXISTS", "Email Already Exists")
-                    .with_detail(format!("A user with email '{}' already exists", email));
-                (
-                    StatusCode::CONFLICT,
-                    ApiErrorResponse::from_single_error(error),
-                )
-            }
+            ApplicationError::UserNotFound => (
+                S::NOT_FOUND,
+                "USER_NOT_FOUND",
+                "User Not Found",
+                "The requested user was not found".to_string(),
+            ),
+            ApplicationError::InvalidCredentials => (
+                S::UNAUTHORIZED,
+                "INVALID_CREDENTIALS",
+                "Invalid Credentials",
+                "The provided credentials are incorrect".to_string(),
+            ),
+            ApplicationError::EmailAlreadyExists(email) => (
+                S::CONFLICT,
+                "EMAIL_ALREADY_EXISTS",
+                "Email Already Exists",
+                format!("A user with email '{email}' already exists"),
+            ),
             ApplicationError::TokenGenerationFailed(msg) => {
-                let error =
-                    JsonApiError::new(500, "TOKEN_GENERATION_FAILED", "Token Generation Failed")
-                        .with_detail(msg);
+                tracing::error!(error = %msg, "token generation failed");
                 (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    ApiErrorResponse::from_single_error(error),
+                    S::INTERNAL_SERVER_ERROR,
+                    "TOKEN_GENERATION_FAILED",
+                    "Token Generation Failed",
+                    INTERNAL_ERROR_DETAIL.to_string(),
                 )
             }
-            ApplicationError::Unauthorized => {
-                let error = JsonApiError::new(401, "UNAUTHORIZED", "Unauthorized")
-                    .with_detail("You are not authorized to access this resource");
-                (
-                    StatusCode::UNAUTHORIZED,
-                    ApiErrorResponse::from_single_error(error),
-                )
-            }
-            ApplicationError::Forbidden(msg) => {
-                let error = JsonApiError::new(403, "FORBIDDEN", "Forbidden").with_detail(msg);
-                (
-                    StatusCode::FORBIDDEN,
-                    ApiErrorResponse::from_single_error(error),
-                )
-            }
-            ApplicationError::ValidationError(msg) => {
-                let error =
-                    JsonApiError::new(422, "VALIDATION_ERROR", "Validation Error").with_detail(msg);
-                (
-                    StatusCode::UNPROCESSABLE_ENTITY,
-                    ApiErrorResponse::from_single_error(error),
-                )
-            }
+            ApplicationError::Unauthorized => (
+                S::UNAUTHORIZED,
+                "UNAUTHORIZED",
+                "Unauthorized",
+                "A valid bearer token is required to access this resource".to_string(),
+            ),
+            ApplicationError::Forbidden(msg) => (S::FORBIDDEN, "FORBIDDEN", "Forbidden", msg),
+            ApplicationError::ValidationError(msg) => (
+                S::UNPROCESSABLE_ENTITY,
+                "VALIDATION_ERROR",
+                "Validation Error",
+                msg,
+            ),
             ApplicationError::MissingUserId => {
-                let error = JsonApiError::new(500, "MISSING_USER_ID", "Missing User ID")
-                    .with_detail("A persisted user was missing its database ID");
+                tracing::error!("persisted user is missing its id");
                 (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    ApiErrorResponse::from_single_error(error),
+                    S::INTERNAL_SERVER_ERROR,
+                    "MISSING_USER_ID",
+                    "Missing User ID",
+                    INTERNAL_ERROR_DETAIL.to_string(),
                 )
             }
         };
 
-        let body = Json(api_error);
-        (status, body).into_response()
+        error_response(status, code, title, detail)
     }
 }
 
 /// Convert domain errors to HTTP responses
-fn domain_error_to_response(err: DomainError) -> (StatusCode, ApiErrorResponse) {
-    match err {
-        DomainError::InvalidEmail(email) => {
-            let error = JsonApiError::new(400, "INVALID_EMAIL", "Invalid Email")
-                .with_detail(format!("The email '{}' is not valid", email));
-            (
-                StatusCode::BAD_REQUEST,
-                ApiErrorResponse::from_single_error(error),
-            )
-        }
+fn domain_error_response(err: DomainError) -> Response {
+    use StatusCode as S;
+
+    let (status, code, title) = match &err {
+        DomainError::InvalidEmail(_) => (S::BAD_REQUEST, "INVALID_EMAIL", "Invalid Email"),
         DomainError::PasswordTooShort => {
-            let error = JsonApiError::new(400, "PASSWORD_TOO_SHORT", "Password Too Short")
-                .with_detail("Password must be at least 8 characters long");
-            (
-                StatusCode::BAD_REQUEST,
-                ApiErrorResponse::from_single_error(error),
-            )
+            (S::BAD_REQUEST, "PASSWORD_TOO_SHORT", "Password Too Short")
         }
-        DomainError::PasswordTooWeak => {
-            let error = JsonApiError::new(400, "PASSWORD_TOO_WEAK", "Password Too Weak")
-                .with_detail("Password must contain at least one uppercase letter, one lowercase letter, and one number");
-            (
-                StatusCode::BAD_REQUEST,
-                ApiErrorResponse::from_single_error(error),
-            )
-        }
-        DomainError::UserTooYoung => {
-            let error = JsonApiError::new(400, "USER_TOO_YOUNG", "User Too Young")
-                .with_detail("User must be at least 18 years old");
-            (
-                StatusCode::BAD_REQUEST,
-                ApiErrorResponse::from_single_error(error),
-            )
-        }
-        DomainError::InvalidAge => {
-            let error = JsonApiError::new(400, "INVALID_AGE", "Invalid Age")
-                .with_detail("Age must be between 18 and 150");
-            (
-                StatusCode::BAD_REQUEST,
-                ApiErrorResponse::from_single_error(error),
-            )
-        }
-        DomainError::EmptyFirstName => {
-            let error = JsonApiError::new(400, "EMPTY_FIRST_NAME", "Empty First Name")
-                .with_detail("First name cannot be empty");
-            (
-                StatusCode::BAD_REQUEST,
-                ApiErrorResponse::from_single_error(error),
-            )
-        }
-        DomainError::EmptyLastName => {
-            let error = JsonApiError::new(400, "EMPTY_LAST_NAME", "Empty Last Name")
-                .with_detail("Last name cannot be empty");
-            (
-                StatusCode::BAD_REQUEST,
-                ApiErrorResponse::from_single_error(error),
-            )
-        }
-        DomainError::InvalidCredentials => {
-            let error = JsonApiError::new(401, "INVALID_CREDENTIALS", "Invalid Credentials")
-                .with_detail("The provided credentials are incorrect");
-            (
-                StatusCode::UNAUTHORIZED,
-                ApiErrorResponse::from_single_error(error),
-            )
-        }
+        DomainError::PasswordTooWeak => (S::BAD_REQUEST, "PASSWORD_TOO_WEAK", "Password Too Weak"),
+        DomainError::UserTooYoung => (S::BAD_REQUEST, "USER_TOO_YOUNG", "User Too Young"),
+        DomainError::InvalidAge => (S::BAD_REQUEST, "INVALID_AGE", "Invalid Age"),
+        DomainError::EmptyFirstName => (S::BAD_REQUEST, "EMPTY_FIRST_NAME", "Empty First Name"),
+        DomainError::EmptyLastName => (S::BAD_REQUEST, "EMPTY_LAST_NAME", "Empty Last Name"),
+        DomainError::InvalidCredentials => (
+            S::UNAUTHORIZED,
+            "INVALID_CREDENTIALS",
+            "Invalid Credentials",
+        ),
         DomainError::PasswordHashingFailed => {
-            let error =
-                JsonApiError::new(500, "PASSWORD_HASHING_FAILED", "Password Hashing Failed")
-                    .with_detail("Failed to hash password");
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                ApiErrorResponse::from_single_error(error),
-            )
+            tracing::error!("password hashing failed");
+            return error_response(
+                S::INTERNAL_SERVER_ERROR,
+                "PASSWORD_HASHING_FAILED",
+                "Password Hashing Failed",
+                INTERNAL_ERROR_DETAIL,
+            );
         }
-        DomainError::EmailAlreadyExists(email) => {
-            let error = JsonApiError::new(409, "EMAIL_ALREADY_EXISTS", "Email Already Exists")
-                .with_detail(format!("User with email {} already exists", email));
-            (
-                StatusCode::CONFLICT,
-                ApiErrorResponse::from_single_error(error),
-            )
+        DomainError::EmailAlreadyExists(_) => {
+            (S::CONFLICT, "EMAIL_ALREADY_EXISTS", "Email Already Exists")
         }
+    };
+
+    // Domain error messages are written for end users, so they double as the detail
+    error_response(status, code, title, capitalize(&err.to_string()))
+}
+
+fn error_response(
+    status: StatusCode,
+    code: &str,
+    title: &str,
+    detail: impl Into<String>,
+) -> Response {
+    let error = JsonApiError::new(status.as_u16(), code, title).with_detail(detail);
+    (status, Json(ApiErrorResponse::from_single_error(error))).into_response()
+}
+
+fn capitalize(message: &str) -> String {
+    let mut chars = message.chars();
+    match chars.next() {
+        Some(first) => first.to_uppercase().chain(chars).collect(),
+        None => String::new(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::domain::user::repository::RepositoryError;
+
+    async fn body_json(response: Response) -> serde_json::Value {
+        let bytes = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap();
+        serde_json::from_slice(&bytes).unwrap()
+    }
+
+    #[tokio::test]
+    async fn test_repository_error_details_are_not_exposed() {
+        let error = ApplicationError::RepositoryError(RepositoryError::PersistenceFailure(
+            "connection refused to 10.0.0.5:5432".to_string(),
+        ));
+        let response = error.into_response();
+        assert_eq!(response.status(), StatusCode::INTERNAL_SERVER_ERROR);
+
+        let body = body_json(response).await;
+        assert_eq!(body["errors"][0]["detail"], INTERNAL_ERROR_DETAIL);
+        assert!(!body.to_string().contains("10.0.0.5"));
+    }
+
+    #[tokio::test]
+    async fn test_domain_error_uses_its_message_as_detail() {
+        let response = ApplicationError::DomainError(DomainError::UserTooYoung).into_response();
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+
+        let body = body_json(response).await;
+        assert_eq!(body["errors"][0]["code"], "USER_TOO_YOUNG");
+        assert_eq!(
+            body["errors"][0]["detail"],
+            "User must be at least 18 years old"
+        );
     }
 }
