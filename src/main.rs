@@ -2,6 +2,8 @@ use mini_rust_api::bootstrap::BootstrapError;
 use mini_rust_api::infra::{Config, ConfigError};
 use mini_rust_api::presentation::create_router;
 use mini_rust_api::presentation::middleware::{CorsLayerError, cors_layer};
+use std::error::Error as StdError;
+use std::process::ExitCode;
 use thiserror::Error;
 use tracing_subscriber::EnvFilter;
 
@@ -28,7 +30,7 @@ enum MainError {
 }
 
 #[tokio::main]
-async fn main() -> Result<(), MainError> {
+async fn main() -> ExitCode {
     tracing_subscriber::fmt()
         .with_env_filter(
             EnvFilter::try_from_default_env()
@@ -36,6 +38,28 @@ async fn main() -> Result<(), MainError> {
         )
         .init();
 
+    match run().await {
+        Ok(()) => ExitCode::SUCCESS,
+        Err(error) => {
+            tracing::error!("{}", error_chain(&error));
+            ExitCode::FAILURE
+        }
+    }
+}
+
+/// Render an error with its full chain of causes on one line
+fn error_chain(error: &dyn StdError) -> String {
+    let mut message = error.to_string();
+    let mut source = error.source();
+    while let Some(cause) = source {
+        message.push_str(": ");
+        message.push_str(&cause.to_string());
+        source = cause.source();
+    }
+    message
+}
+
+async fn run() -> Result<(), MainError> {
     let config = Config::from_env()?;
 
     // Bootstrap: wire up all dependencies
