@@ -6,7 +6,7 @@
 
 use std::sync::Arc;
 
-use crate::app::auth::{LoginUseCase, RegisterUseCase};
+use crate::app::auth::{AuthenticateUseCase, LoginUseCase, RegisterUseCase};
 use crate::app::ports::TokenService;
 use crate::app::user::{CreateUserUseCase, GetUserUseCase, ListUsersUseCase, UpdateUserUseCase};
 use crate::domain::user::UserRepository;
@@ -29,42 +29,39 @@ pub enum BootstrapError {
 /// 1. Connects to the database
 /// 2. Creates infrastructure implementations (repositories, services)
 /// 3. Injects them into application use cases
-/// 4. Returns a fully configured AppState
-pub async fn create_app_state(config: Config) -> Result<AppState, BootstrapError> {
+pub async fn create_app_state(config: &Config) -> Result<AppState, BootstrapError> {
     // Infrastructure layer: Database connection (internal to bootstrap)
     let db = Arc::new(
-        config::database::connect(&config)
+        config::database::connect(config)
             .await
             .map_err(BootstrapError::Database)?,
     );
 
-    // Infrastructure layer: Create repository implementation
+    // Infrastructure layer: Create adapters
     let user_repository: Arc<dyn UserRepository> = Arc::new(SeaOrmUserRepository::new(db));
+    let token_service: Arc<dyn TokenService> =
+        Arc::new(JwtTokenService::new(config.auth.jwt_secret.as_bytes()));
 
-    // Infrastructure layer: Create token service
-    let jwt_token_service = Arc::new(JwtTokenService::new(config.auth.jwt_secret.as_bytes()));
-    let token_service: Arc<dyn TokenService> = jwt_token_service.clone();
+    Ok(build_app_state(user_repository, token_service))
+}
 
-    // Application layer: Create use cases
-    let login_use_case = Arc::new(LoginUseCase::new(
-        user_repository.clone(),
-        token_service.clone(),
-    ));
-    let register_use_case = Arc::new(RegisterUseCase::new(user_repository.clone()));
-    let create_user_use_case = Arc::new(CreateUserUseCase::new(user_repository.clone()));
-    let get_user_use_case = Arc::new(GetUserUseCase::new(user_repository.clone()));
-    let list_users_use_case = Arc::new(ListUsersUseCase::new(user_repository.clone()));
-    let update_user_use_case = Arc::new(UpdateUserUseCase::new(user_repository.clone()));
-
-    Ok(AppState {
-        config,
-        user_repository,
-        jwt_token_service,
-        login_use_case,
-        register_use_case,
-        create_user_use_case,
-        get_user_use_case,
-        list_users_use_case,
-        update_user_use_case,
-    })
+/// Wire use cases from the given adapters
+///
+/// Separated from [`create_app_state`] so tests can supply in-memory adapters.
+pub fn build_app_state(
+    user_repository: Arc<dyn UserRepository>,
+    token_service: Arc<dyn TokenService>,
+) -> AppState {
+    AppState {
+        authenticate_use_case: Arc::new(AuthenticateUseCase::new(
+            user_repository.clone(),
+            token_service.clone(),
+        )),
+        login_use_case: Arc::new(LoginUseCase::new(user_repository.clone(), token_service)),
+        register_use_case: Arc::new(RegisterUseCase::new(user_repository.clone())),
+        create_user_use_case: Arc::new(CreateUserUseCase::new(user_repository.clone())),
+        get_user_use_case: Arc::new(GetUserUseCase::new(user_repository.clone())),
+        list_users_use_case: Arc::new(ListUsersUseCase::new(user_repository.clone())),
+        update_user_use_case: Arc::new(UpdateUserUseCase::new(user_repository)),
+    }
 }

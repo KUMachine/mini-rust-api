@@ -1,6 +1,8 @@
+pub mod authenticate_use_case;
 pub mod login_use_case;
 pub mod register_use_case;
 
+pub use authenticate_use_case::AuthenticateUseCase;
 pub use login_use_case::LoginUseCase;
 pub use register_use_case::RegisterUseCase;
 

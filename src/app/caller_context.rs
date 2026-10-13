@@ -1,13 +1,9 @@
 //! Caller context for authorization
 //!
 //! Represents the identity and roles of the authenticated caller.
-//! Built by the auth middleware from the JWT token + a DB role lookup,
-//! then inserted into request extensions for handler extraction.
+//! Built by `AuthenticateUseCase` from an access token + a role lookup.
 
 use crate::domain::user::Role;
-use axum::http::StatusCode;
-use axum::http::request::Parts;
-use axum_core::extract::FromRequestParts;
 use std::collections::HashSet;
 
 /// Context about the authenticated caller, passed to use cases for authorization
@@ -40,22 +36,6 @@ impl CallerContext {
     /// Check if the caller can access a user resource (admin OR owner)
     pub fn can_access_user(&self, target_user_id: i32) -> bool {
         self.is_admin() || self.is_owner(target_user_id)
-    }
-}
-
-/// Extract CallerContext from request extensions (inserted by auth middleware)
-impl<S> FromRequestParts<S> for CallerContext
-where
-    S: Send + Sync,
-{
-    type Rejection = StatusCode;
-
-    async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
-        parts
-            .extensions
-            .get::<CallerContext>()
-            .cloned()
-            .ok_or(StatusCode::UNAUTHORIZED)
     }
 }
 

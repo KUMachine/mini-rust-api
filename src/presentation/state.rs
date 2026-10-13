@@ -1,28 +1,20 @@
 //! Application state
 //!
 //! Contains the shared application state passed to all handlers.
-//! Handlers interact with use cases only, which abstract away persistence.
-//! The user_repository is exposed for role lookups in the auth middleware.
+//! Handlers interact with use cases only, which abstract away persistence
+//! and other infrastructure.
 
-use crate::app::auth::{LoginUseCase, RegisterUseCase};
+use crate::app::auth::{AuthenticateUseCase, LoginUseCase, RegisterUseCase};
 use crate::app::user::{CreateUserUseCase, GetUserUseCase, ListUsersUseCase, UpdateUserUseCase};
-use crate::domain::user::UserRepository;
-use crate::infra::Config;
-use crate::infra::auth::JwtTokenService;
 use std::sync::Arc;
 
 /// Shared application state
 ///
-/// Contains all dependencies that need to be available to request handlers.
-/// Exposes use cases and the user repository (a domain trait, not infrastructure).
+/// Contains all use cases that need to be available to request handlers.
 #[derive(Clone)]
 pub struct AppState {
-    pub config: Config,
-    // Repository (domain trait) - used by auth middleware for role lookups
-    pub user_repository: Arc<dyn UserRepository>,
-    // Token service - used by auth middleware for JWT decoding
-    pub jwt_token_service: Arc<JwtTokenService>,
     // Auth use cases
+    pub authenticate_use_case: Arc<AuthenticateUseCase>,
     pub login_use_case: Arc<LoginUseCase>,
     pub register_use_case: Arc<RegisterUseCase>,
     // User use cases

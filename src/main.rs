@@ -37,7 +37,7 @@ async fn main() -> Result<(), MainError> {
     let config = Config::from_env()?;
 
     // Bootstrap: wire up all dependencies
-    let state = mini_rust_api::create_app_state(config.clone()).await?;
+    let state = mini_rust_api::create_app_state(&config).await?;
     let cors = cors_layer(&config)?;
 
     // Build the HTTP router

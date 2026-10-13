@@ -2,6 +2,7 @@
 //!
 //! Provides validation-aware extractors for request handling.
 
+mod caller_context;
 mod validated_json;
 mod validated_pagination;
 
