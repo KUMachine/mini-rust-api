@@ -31,7 +31,9 @@ presentation  →  app  →  domain  ←  infra
 - **app/**: one use case per file, command/response DTOs, service ports (`app/ports/`), `ApplicationError`. Transport-agnostic: never import axum here.
 - **infra/**: SeaORM and in-memory repositories, `JwtTokenService`, config loading.
 - **presentation/**: handlers, `create_router`, extractors, middleware, `IntoResponse` for errors, OpenAPI.
-- **bootstrap.rs**: `create_app_state(&Config)` connects to the database; `build_app_state(repo, token_service)` wires use cases from any adapters (tests use it with in-memory ones).
+- **bootstrap.rs**: `create_app_state(&Config)` builds the configured storage and seeds the admin; `build_app_state(repo, token_service)` wires use cases from any adapters (tests use it with in-memory ones).
+
+`tests/architecture_test.rs` enforces which modules and crates each layer may reference. When it fails, move the code to the layer its message names; avoid loosening the rule.
 
 ### Conventions
 
