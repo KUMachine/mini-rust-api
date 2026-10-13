@@ -1975,8 +1975,8 @@ dependencies = [
 name = "migration"
 version = "0.1.0"
 dependencies = [
- "dotenvy",
  "sea-orm-migration",
+ "tokio",
 ]
 
 [[package]]

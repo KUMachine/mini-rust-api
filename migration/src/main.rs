@@ -1,64 +1,35 @@
 use sea_orm_migration::prelude::*;
+use sea_orm_migration::sea_orm::{Database, DbConn};
 
-#[derive(Debug)]
-enum MigrationEnvError {
-    MissingEnv {
-        name: &'static str,
-        source: std::env::VarError,
-    },
-}
-
-impl std::fmt::Display for MigrationEnvError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::MissingEnv { name, .. } => write!(f, "{name} is required"),
-        }
+/// Resolve the database URL.
+///
+/// `DATABASE_URL` takes precedence; otherwise the URL is assembled from the
+/// same `DATABASE__*` variables the API uses.
+fn database_url() -> Result<String, DbErr> {
+    if let Ok(url) = std::env::var("DATABASE_URL") {
+        return Ok(url);
     }
+
+    let host = required_env("DATABASE__HOST")?;
+    let port = std::env::var("DATABASE__PORT").unwrap_or_else(|_| "5432".to_string());
+    let username = required_env("DATABASE__USERNAME")?;
+    let password = required_env("DATABASE__PASSWORD")?;
+    let name = required_env("DATABASE__NAME")?;
+
+    Ok(format!(
+        "postgres://{username}:{password}@{host}:{port}/{name}"
+    ))
 }
 
-impl std::error::Error for MigrationEnvError {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        match self {
-            Self::MissingEnv { source, .. } => Some(source),
-        }
-    }
+fn required_env(name: &'static str) -> Result<String, DbErr> {
+    std::env::var(name).map_err(|_| DbErr::Custom(format!("{name} is required")))
 }
 
-#[cfg(debug_assertions)]
-fn load_env() -> Result<(), MigrationEnvError> {
-    dotenvy::dotenv().ok();
-
-    let database_host = required_env("DATABASE__HOST")?;
-    let database_port = std::env::var("DATABASE__PORT").unwrap_or_else(|_| "5432".to_string());
-    let database_user = required_env("DATABASE__USERNAME")?;
-    let database_password = required_env("DATABASE__PASSWORD")?;
-    let database_name = required_env("DATABASE__NAME")?;
-
-    let database_url = format!(
-        "postgres://{}:{}@{}:{}/{}",
-        database_user, database_password, database_host, database_port, database_name
-    );
-
-    std::env::set_var("DATABASE_URL", database_url);
-    Ok(())
+async fn connect() -> Result<DbConn, DbErr> {
+    Database::connect(database_url()?).await
 }
 
-#[cfg(not(debug_assertions))]
-fn load_env() -> Result<(), MigrationEnvError> {
-    Ok(())
-}
-
-#[cfg(debug_assertions)]
-fn required_env(name: &'static str) -> Result<String, MigrationEnvError> {
-    std::env::var(name).map_err(|source| MigrationEnvError::MissingEnv { name, source })
-}
-
-#[async_std::main]
+#[tokio::main]
 async fn main() {
-    if let Err(error) = load_env() {
-        eprintln!("{error}");
-        std::process::exit(1);
-    }
-
-    cli::run_cli(migration::Migrator).await;
+    cli::run_cli_with_custom_connection(migration::Migrator, connect).await;
 }
