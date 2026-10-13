@@ -1,12 +1,8 @@
-use axum::{Router, middleware};
 use mini_rust_api::bootstrap::BootstrapError;
 use mini_rust_api::infra::{Config, ConfigError};
-use mini_rust_api::presentation::api::{auth_routes, health_routes, user_routes};
-use mini_rust_api::presentation::middleware::{CorsLayerError, auth_middleware, cors_layer};
-use mini_rust_api::presentation::openapi::ApiDoc;
+use mini_rust_api::presentation::create_router;
+use mini_rust_api::presentation::middleware::{CorsLayerError, cors_layer};
 use thiserror::Error;
-use utoipa::OpenApi;
-use utoipa_swagger_ui::SwaggerUi;
 
 #[derive(Debug, Error)]
 enum MainError {
@@ -41,16 +37,7 @@ async fn main() -> Result<(), MainError> {
     let cors = cors_layer(&config)?;
 
     // Build the HTTP router
-    let app = Router::new()
-        .merge(auth_routes())
-        .merge(health_routes())
-        .merge(SwaggerUi::new("/api-docs").url("/api-docs/openapi.json", ApiDoc::openapi()))
-        .merge(user_routes().route_layer(middleware::from_fn_with_state(
-            state.clone(),
-            auth_middleware,
-        )))
-        .layer(cors)
-        .with_state(state);
+    let app = create_router(state).layer(cors);
 
     // Start the server
     let address = format!("{}:{}", config.server.host, config.server.port);
