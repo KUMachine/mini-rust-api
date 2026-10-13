@@ -20,6 +20,8 @@ pub struct Config {
 pub struct Server {
     pub host: String,
     pub port: u16,
+    /// Origins allowed to make cross-origin requests (e.g. `https://app.example.com`)
+    pub cors_allowed_origins: Vec<String>,
 }
 
 /// Database configuration
@@ -95,6 +97,10 @@ impl Config {
                     "SERVER__PORT",
                     fetch_env_with_default("SERVER__PORT", "3000"),
                 )?,
+                cors_allowed_origins: parse_list(&fetch_env_with_default(
+                    "SERVER__CORS_ALLOWED_ORIGINS",
+                    "",
+                )),
             },
             auth: Auth {
                 jwt_secret: fetch_env("JWT_SECRET")?,
@@ -119,4 +125,27 @@ fn parse_port(name: &'static str, value: String) -> Result<u16, ConfigError> {
             value,
             source,
         })
+}
+
+fn parse_list(value: &str) -> Vec<String> {
+    value
+        .split(',')
+        .map(str::trim)
+        .filter(|item| !item.is_empty())
+        .map(str::to_string)
+        .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_parse_list() {
+        assert_eq!(
+            parse_list(" http://a.com, http://b.com ,,"),
+            vec!["http://a.com", "http://b.com"]
+        );
+        assert!(parse_list("").is_empty());
+    }
 }
