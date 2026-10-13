@@ -13,6 +13,9 @@ pub enum RepositoryError {
     #[error("persistence failure: {0}")]
     PersistenceFailure(String),
 
+    #[error("conflicts with an existing entity: {0}")]
+    Conflict(String),
+
     #[error("entity not found")]
     NotFound,
 
