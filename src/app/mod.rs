@@ -1,4 +1,5 @@
 pub mod auth;
+mod blocking;
 pub mod caller_context;
 pub mod errors;
 pub mod ports;

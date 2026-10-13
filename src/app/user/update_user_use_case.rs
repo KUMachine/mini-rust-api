@@ -1,3 +1,4 @@
+use super::registration::email_conflict;
 use super::{UpdateUserCommand, UserResponse};
 use crate::app::caller_context::CallerContext;
 use crate::app::errors::{AppResult, ApplicationError};
@@ -40,14 +41,22 @@ impl UpdateUserUseCase {
         // Parse and validate email (domain validation)
         let new_email = Email::try_from(command.email)?;
 
+        // The new email must not belong to another user
+        if &new_email != user.email() && self.user_repository.exists_with_email(&new_email).await? {
+            return Err(ApplicationError::EmailAlreadyExists(new_email.to_string()));
+        }
+
         // Domain logic: update email if different
-        user.change_email(new_email)?;
+        user.change_email(new_email.clone())?;
 
         // Domain logic: update profile
         user.update_profile(command.first_name, command.last_name, command.age)?;
 
         // Persist changes
-        self.user_repository.save(&mut user).await?;
+        self.user_repository
+            .save(&mut user)
+            .await
+            .map_err(|e| email_conflict(e, &new_email))?;
 
         // Convert to response DTO
         UserResponse::try_from_domain(&user)

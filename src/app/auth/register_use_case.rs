@@ -1,7 +1,8 @@
 use super::RegisterCommand;
-use crate::app::errors::{AppResult, ApplicationError};
+use crate::app::errors::AppResult;
 use crate::app::user::UserResponse;
-use crate::domain::user::{Email, User, UserRepository};
+use crate::app::user::registration::{NewUser, register_user};
+use crate::domain::user::UserRepository;
 use std::sync::Arc;
 
 /// RegisterUseCase - handles user registration
@@ -15,27 +16,16 @@ impl RegisterUseCase {
     }
 
     pub async fn execute(&self, command: RegisterCommand) -> AppResult<UserResponse> {
-        // Parse and validate email (domain validation)
-        let email = Email::try_from(command.email.as_str())?;
-
-        // Check if user already exists
-        if self.user_repository.exists_with_email(&email).await? {
-            return Err(ApplicationError::EmailAlreadyExists(command.email));
-        }
-
-        // Create user entity (domain logic)
-        let mut user = User::register(
-            email,
-            command.password,
-            command.first_name,
-            command.last_name,
-            command.age,
-        )?;
-
-        // Persist the user
-        self.user_repository.save(&mut user).await?;
-
-        // Convert to response DTO
-        UserResponse::try_from_domain(&user)
+        register_user(
+            self.user_repository.as_ref(),
+            NewUser {
+                email: command.email,
+                password: command.password,
+                first_name: command.first_name,
+                last_name: command.last_name,
+                age: command.age,
+            },
+        )
+        .await
     }
 }

@@ -39,6 +39,9 @@ pub enum ApplicationError {
 
     #[error("persisted user is missing an id")]
     MissingUserId,
+
+    #[error("internal error: {0}")]
+    Internal(String),
 }
 
 /// Type alias for application results

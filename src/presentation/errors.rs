@@ -70,6 +70,15 @@ impl IntoResponse for ApplicationError {
                 "Validation Error",
                 msg,
             ),
+            ApplicationError::Internal(msg) => {
+                tracing::error!(error = %msg, "internal error");
+                (
+                    S::INTERNAL_SERVER_ERROR,
+                    "INTERNAL_ERROR",
+                    "Internal Error",
+                    INTERNAL_ERROR_DETAIL.to_string(),
+                )
+            }
             ApplicationError::MissingUserId => {
                 tracing::error!("persisted user is missing its id");
                 (

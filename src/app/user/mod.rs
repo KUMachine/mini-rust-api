@@ -1,6 +1,7 @@
 pub mod create_user_use_case;
 pub mod get_user_use_case;
 pub mod list_users_use_case;
+pub(crate) mod registration;
 pub mod update_user_use_case;
 pub mod user_response;
 
