@@ -34,13 +34,25 @@ pub struct Server {
 }
 
 /// Database configuration
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct Database {
     pub host: String,
     pub port: u16,
     pub name: String,
     pub username: String,
     pub password: String,
+}
+
+impl fmt::Debug for Database {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Database")
+            .field("host", &self.host)
+            .field("port", &self.port)
+            .field("name", &self.name)
+            .field("username", &self.username)
+            .field("password", &"[REDACTED]")
+            .finish()
+    }
 }
 
 /// Authentication configuration
@@ -210,6 +222,22 @@ mod tests {
         .unwrap();
         assert!(matches!(config.storage, Storage::Postgres(ref db) if db.port == 5432));
         assert_eq!(config.server.port, 3000);
+    }
+
+    #[test]
+    fn test_debug_output_redacts_secrets() {
+        let config = load(&[
+            ("JWT_SECRET", SECRET),
+            ("DATABASE__USERNAME", "postgres"),
+            ("DATABASE__PASSWORD", "hunter2-db-password"),
+            ("DATABASE__HOST", "localhost"),
+            ("DATABASE__PORT", "5432"),
+            ("DATABASE__NAME", "app"),
+        ])
+        .unwrap();
+        let debug = format!("{config:?}");
+        assert!(!debug.contains("hunter2-db-password"));
+        assert!(!debug.contains(SECRET));
     }
 
     #[test]
