@@ -1,6 +1,6 @@
 # Rust Mini API
 
-A production-ready Rust REST API boilerplate using **Axum**, **SeaORM**, and **JWT authentication** — built with Hexagonal Architecture (Ports & Adapters) and DDD principles.
+A production-ready Rust REST API boilerplate using **Axum**, **SeaORM**, and **JWT authentication**, built with Hexagonal Architecture (Ports & Adapters) and DDD principles.
 
 ## Quick Start
 
@@ -8,42 +8,59 @@ A production-ready Rust REST API boilerplate using **Axum**, **SeaORM**, and **J
 # 1. Setup environment
 cp .env.example .env
 
-# 2. Start database
-docker-compose up postgresql
+# 2a. Run everything with Docker (PostgreSQL + migrations + API)
+docker compose up --build
 
-# 3. Run migrations
-cd migration && cargo run && cd ..
-
-# 4. Run the app
+# 2b. Or run locally against the Docker database
+docker compose up -d postgresql
+(cd migration && cargo run -- up)
 cargo run
 ```
 
-**Swagger UI**: http://localhost:3000/api-docs
+**Swagger UI**: <http://localhost:3000/api-docs>
 
 ## Commands
 
-| Command                           | Description          |
-| --------------------------------- | -------------------- |
-| `cargo run`                       | Run the application  |
-| `cargo build --release`           | Build for production |
-| `cargo fmt`                       | Format code          |
-| `cargo test`                      | Run all tests        |
-| `docker-compose up mini-rust-api` | Run with Docker      |
+| Command                                                 | Description                  |
+| ------------------------------------------------------- | ---------------------------- |
+| `cargo run`                                             | Run the application          |
+| `cargo build --release`                                 | Build for production         |
+| `cargo test --workspace`                                | Run all tests (no DB needed) |
+| `cargo clippy --workspace --all-targets -- -D warnings` | Lint                         |
+| `cargo fmt --all`                                       | Format code                  |
+| `cd migration && cargo run -- up`                       | Apply database migrations    |
+| `docker compose up --build`                             | Run the full stack in Docker |
+
+## API
+
+| Method | Path          | Auth          | Description               |
+| ------ | ------------- | ------------- | ------------------------- |
+| GET    | `/health`     | -             | Health check              |
+| POST   | `/register`   | -             | Create an account         |
+| POST   | `/login`      | -             | Get a bearer token        |
+| GET    | `/users`      | Admin         | List users (paginated)    |
+| POST   | `/users`      | Admin         | Create a user             |
+| GET    | `/users/{id}` | Owner / Admin | Get a user                |
+| PUT    | `/users/{id}` | Owner / Admin | Update a user             |
+
+Errors follow the [JSON:API error format](https://jsonapi.org/format/#errors).
 
 ## Project Structure
 
-```
+```text
 src/
 ├── domain/        # Core business logic (entities, value objects, ports)
 ├── app/           # Use cases & orchestration
-├── infra/         # Database & external adapters
-├── presentation/  # HTTP handlers, middleware, extractors
+├── infra/         # Database, JWT & config adapters
+├── presentation/  # HTTP router, handlers, middleware, extractors
 └── bootstrap.rs   # Dependency injection wiring
+migration/         # SeaORM migrations + CLI
+tests/             # HTTP-level integration tests
 ```
 
 ## Documentation
 
-For detailed architecture documentation, development patterns, and AI-assisted development guidance, see **[AGENTS.md](./AGENTS.md)**.
+For architecture, conventions and development patterns, see **[AGENTS.md](./AGENTS.md)**.
 
 ## License
 
