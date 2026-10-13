@@ -4,6 +4,7 @@
 
 use crate::app::auth::{AuthToken, LoginCommand, RegisterCommand};
 use crate::app::user::{CreateUserCommand, UpdateUserCommand, UserResponse};
+use crate::presentation::responses::{ApiErrorResponse, JsonApiError, JsonApiErrorSource};
 use utoipa::OpenApi;
 
 /// API Documentation
@@ -19,7 +20,17 @@ use utoipa::OpenApi;
         crate::presentation::api::auth::register
     ),
     components(
-        schemas(UserResponse, CreateUserCommand, UpdateUserCommand, LoginCommand, RegisterCommand, AuthToken)
+        schemas(
+            UserResponse,
+            CreateUserCommand,
+            UpdateUserCommand,
+            LoginCommand,
+            RegisterCommand,
+            AuthToken,
+            ApiErrorResponse,
+            JsonApiError,
+            JsonApiErrorSource
+        )
     ),
     modifiers(&SecurityAddon),
     tags(

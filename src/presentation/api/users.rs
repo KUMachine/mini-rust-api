@@ -5,6 +5,7 @@
 use axum::{
     Json, Router,
     extract::{Path, State},
+    http::StatusCode,
     routing::get,
 };
 
@@ -32,8 +33,9 @@ pub fn user_routes() -> Router<AppState> {
     ),
     responses(
         (status = 200, description = "List of users", body = ApiResponse<Vec<UserResponse>>),
-        (status = 401, description = "Unauthorized - Valid JWT token required"),
-        (status = 403, description = "Forbidden - Admin role required")
+        (status = 400, description = "Invalid pagination parameters", body = ApiErrorResponse),
+        (status = 401, description = "Unauthorized - Valid JWT token required", body = ApiErrorResponse),
+        (status = 403, description = "Forbidden - Admin role required", body = ApiErrorResponse)
     ),
     security(
         ("bearer_auth" = [])
@@ -72,9 +74,9 @@ pub async fn list_users(
     ),
     responses(
         (status = 200, description = "User found", body = ApiResponse<UserResponse>),
-        (status = 403, description = "Forbidden - Can only view own profile unless admin"),
-        (status = 404, description = "User not found"),
-        (status = 401, description = "Unauthorized - Valid JWT token required")
+        (status = 401, description = "Unauthorized - Valid JWT token required", body = ApiErrorResponse),
+        (status = 403, description = "Forbidden - Can only view own profile unless admin", body = ApiErrorResponse),
+        (status = 404, description = "User not found", body = ApiErrorResponse)
     ),
     security(
         ("bearer_auth" = [])
@@ -96,10 +98,12 @@ pub async fn get_user(
     path = "/users",
     request_body = CreateUserCommand,
     responses(
-        (status = 200, description = "User created successfully", body = ApiResponse<UserResponse>),
-        (status = 422, description = "Validation error", body = ApiErrorResponse),
-        (status = 401, description = "Unauthorized - Valid JWT token required"),
-        (status = 403, description = "Forbidden - Admin role required")
+        (status = 201, description = "User created successfully", body = ApiResponse<UserResponse>),
+        (status = 400, description = "Domain validation failed", body = ApiErrorResponse),
+        (status = 401, description = "Unauthorized - Valid JWT token required", body = ApiErrorResponse),
+        (status = 403, description = "Forbidden - Admin role required", body = ApiErrorResponse),
+        (status = 409, description = "A user with this email already exists", body = ApiErrorResponse),
+        (status = 422, description = "Validation error", body = ApiErrorResponse)
     ),
     security(
         ("bearer_auth" = [])
@@ -110,21 +114,27 @@ pub async fn create_user(
     State(state): State<AppState>,
     caller: CallerContext,
     ValidatedJson(command): ValidatedJson<CreateUserCommand>,
-) -> Result<Json<ApiResponse<UserResponse>>, ApplicationError> {
+) -> Result<(StatusCode, Json<ApiResponse<UserResponse>>), ApplicationError> {
     let user = state.create_user_use_case.execute(command, &caller).await?;
-    Ok(Json(ApiResponse::ok(user)))
+    Ok((StatusCode::CREATED, Json(ApiResponse::ok(user))))
 }
 
 /// Update a user
 #[utoipa::path(
     put,
     path = "/users/{id}",
+    params(
+        ("id" = i32, Path, description = "User ID")
+    ),
     request_body = UpdateUserCommand,
     responses(
         (status = 200, description = "User updated successfully", body = ApiResponse<UserResponse>),
-        (status = 422, description = "Validation error", body = ApiErrorResponse),
-        (status = 401, description = "Unauthorized - Valid JWT token required"),
-        (status = 403, description = "Forbidden - Can only update own profile unless admin")
+        (status = 400, description = "Domain validation failed", body = ApiErrorResponse),
+        (status = 401, description = "Unauthorized - Valid JWT token required", body = ApiErrorResponse),
+        (status = 403, description = "Forbidden - Can only update own profile unless admin", body = ApiErrorResponse),
+        (status = 404, description = "User not found", body = ApiErrorResponse),
+        (status = 409, description = "Email belongs to another user", body = ApiErrorResponse),
+        (status = 422, description = "Validation error", body = ApiErrorResponse)
     ),
     security(
         ("bearer_auth" = [])

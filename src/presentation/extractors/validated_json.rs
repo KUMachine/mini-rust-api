@@ -16,6 +16,11 @@ use validator::Validate;
 /// Extractor that validates JSON request bodies
 pub struct ValidatedJson<T>(pub T);
 
+/// Extractor for JSON request bodies that reports malformed input as JSON:API errors
+///
+/// Use this instead of `axum::Json` when the body has no field-level validation rules.
+pub struct JsonBody<T>(pub T);
+
 pub struct ValidationRejection(Vec<String>);
 
 impl IntoResponse for ValidationRejection {
@@ -106,5 +111,20 @@ where
             }
             Err(rejection) => Err(json_rejection_to_response(rejection)),
         }
+    }
+}
+
+impl<S, T> FromRequest<S> for JsonBody<T>
+where
+    S: Send + Sync,
+    T: DeserializeOwned,
+{
+    type Rejection = Response;
+
+    async fn from_request(req: Request, state: &S) -> Result<Self, Self::Rejection> {
+        Json::<T>::from_request(req, state)
+            .await
+            .map(|Json(value)| JsonBody(value))
+            .map_err(json_rejection_to_response)
     }
 }

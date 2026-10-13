@@ -2,12 +2,13 @@
 //!
 //! Handles login and registration endpoints.
 
-use axum::{Json, Router, extract::State, routing::post};
+use axum::{Json, Router, extract::State, http::StatusCode, routing::post};
 
 use crate::app::ApplicationError;
 use crate::app::auth::{AuthToken, LoginCommand, RegisterCommand};
 use crate::app::user::UserResponse;
-use crate::presentation::responses::ApiResponse;
+use crate::presentation::extractors::JsonBody;
+use crate::presentation::responses::{ApiErrorResponse, ApiResponse};
 use crate::presentation::state::AppState;
 
 /// Login endpoint
@@ -17,14 +18,15 @@ use crate::presentation::state::AppState;
     request_body = LoginCommand,
     responses(
         (status = 200, description = "Login successful", body = ApiResponse<AuthToken>),
-        (status = 401, description = "Invalid credentials"),
-        (status = 422, description = "Validation error")
+        (status = 400, description = "Malformed email or request body", body = ApiErrorResponse),
+        (status = 401, description = "Invalid credentials", body = ApiErrorResponse),
+        (status = 422, description = "Request body does not match the schema", body = ApiErrorResponse)
     ),
     tag = "auth"
 )]
 pub async fn login(
     State(state): State<AppState>,
-    Json(command): Json<LoginCommand>,
+    JsonBody(command): JsonBody<LoginCommand>,
 ) -> Result<Json<ApiResponse<AuthToken>>, ApplicationError> {
     let auth_token = state.login_use_case.execute(command).await?;
     Ok(Json(ApiResponse::ok(auth_token)))
@@ -36,18 +38,19 @@ pub async fn login(
     path = "/register",
     request_body = RegisterCommand,
     responses(
-        (status = 200, description = "User registered successfully", body = ApiResponse<UserResponse>),
-        (status = 422, description = "Validation error"),
-        (status = 400, description = "User already exists")
+        (status = 201, description = "User registered successfully", body = ApiResponse<UserResponse>),
+        (status = 400, description = "Domain validation failed (email, password, profile)", body = ApiErrorResponse),
+        (status = 409, description = "A user with this email already exists", body = ApiErrorResponse),
+        (status = 422, description = "Request body does not match the schema", body = ApiErrorResponse)
     ),
     tag = "auth"
 )]
 pub async fn register(
     State(state): State<AppState>,
-    Json(command): Json<RegisterCommand>,
-) -> Result<Json<ApiResponse<UserResponse>>, ApplicationError> {
+    JsonBody(command): JsonBody<RegisterCommand>,
+) -> Result<(StatusCode, Json<ApiResponse<UserResponse>>), ApplicationError> {
     let user = state.register_use_case.execute(command).await?;
-    Ok(Json(ApiResponse::ok(user)))
+    Ok((StatusCode::CREATED, Json(ApiResponse::ok(user))))
 }
 
 /// Create authentication routes
