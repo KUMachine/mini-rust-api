@@ -58,6 +58,9 @@ pub enum ConfigError {
         source: dotenvy::Error,
     },
 
+    #[error("{name} must not be empty")]
+    EmptyEnv { name: &'static str },
+
     #[error("{name} must be a valid port, got `{value}`")]
     InvalidPort {
         name: &'static str,
@@ -103,10 +106,27 @@ impl Config {
                 )),
             },
             auth: Auth {
-                jwt_secret: fetch_env("JWT_SECRET")?,
+                jwt_secret: jwt_secret(fetch_env("JWT_SECRET")?)?,
             },
         })
     }
+}
+
+/// HS256 keys should be at least as long as the hash output (256 bits)
+const MIN_RECOMMENDED_JWT_SECRET_LEN: usize = 32;
+
+fn jwt_secret(secret: String) -> Result<String, ConfigError> {
+    if secret.trim().is_empty() {
+        return Err(ConfigError::EmptyEnv { name: "JWT_SECRET" });
+    }
+
+    if secret.len() < MIN_RECOMMENDED_JWT_SECRET_LEN {
+        tracing::warn!(
+            "JWT_SECRET is shorter than {MIN_RECOMMENDED_JWT_SECRET_LEN} bytes; use a longer random secret"
+        );
+    }
+
+    Ok(secret)
 }
 
 fn fetch_env(name: &'static str) -> Result<String, ConfigError> {
@@ -147,5 +167,14 @@ mod tests {
             vec!["http://a.com", "http://b.com"]
         );
         assert!(parse_list("").is_empty());
+    }
+
+    #[test]
+    fn test_jwt_secret_must_not_be_empty() {
+        assert!(matches!(
+            jwt_secret("  ".to_string()),
+            Err(ConfigError::EmptyEnv { name: "JWT_SECRET" })
+        ));
+        assert!(jwt_secret("a-sufficiently-long-random-secret-value".to_string()).is_ok());
     }
 }
