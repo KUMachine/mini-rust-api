@@ -1,0 +1,6 @@
+# Pinned so local checks, CI and Docker use the same compiler and lints.
+# Bump deliberately; the "Toolchain Preview" CI job warns about newer releases.
+[toolchain]
+channel = "1.99.0"
+components = ["clippy", "rustfmt"]
+profile = "minimal"
