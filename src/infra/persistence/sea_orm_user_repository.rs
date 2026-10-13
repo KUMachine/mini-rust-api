@@ -1,14 +1,15 @@
 use super::entities::roles::{self, Entity as RolesEntity};
 use super::entities::user_roles::{self, Entity as UserRolesEntity};
 use super::entities::users::{self, Entity as UsersEntity};
+use super::persistence_error;
 use crate::domain::shared::UserId;
 use crate::domain::user::entity::User;
 use crate::domain::user::repository::{RepositoryError, UserRepository};
 use crate::domain::user::{Email, Password, Role, UserProfile};
 use async_trait::async_trait;
 use sea_orm::{
-    ActiveModelTrait, ColumnTrait, ConnectionTrait, DbErr, EntityTrait, PaginatorTrait,
-    QueryFilter, QueryOrder, QuerySelect, Set, SqlErr, TransactionTrait,
+    ActiveModelTrait, ColumnTrait, ConnectionTrait, EntityTrait, PaginatorTrait, QueryFilter,
+    QueryOrder, QuerySelect, Set, TransactionTrait,
 };
 use std::collections::{HashMap, HashSet};
 use std::str::FromStr;
@@ -17,14 +18,6 @@ use std::sync::Arc;
 /// SeaORM implementation of UserRepository
 pub struct SeaOrmUserRepository {
     db: Arc<sea_orm::DatabaseConnection>,
-}
-
-/// Translate a SeaORM error into a persistence-agnostic repository error
-fn persistence_error(err: DbErr) -> RepositoryError {
-    match err.sql_err() {
-        Some(SqlErr::UniqueConstraintViolation(detail)) => RepositoryError::Conflict(detail),
-        _ => RepositoryError::PersistenceFailure(err.to_string()),
-    }
 }
 
 impl SeaOrmUserRepository {
@@ -258,7 +251,7 @@ impl UserRepository for SeaOrmUserRepository {
 mod tests {
     use super::*;
     use chrono::NaiveDate;
-    use sea_orm::{DatabaseBackend, MockDatabase, MockExecResult, Value};
+    use sea_orm::{DatabaseBackend, DbErr, MockDatabase, MockExecResult, Value};
     use std::collections::BTreeMap;
 
     fn user_model(id: i32, email: &str) -> users::Model {
