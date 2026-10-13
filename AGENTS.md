@@ -9,16 +9,14 @@ Rust REST API boilerplate: Axum, JWT authentication, PostgreSQL via SeaORM, Open
 ## Commands
 
 ```bash
-cargo run                                              # run the API (needs .env + PostgreSQL)
-cargo test --workspace                                 # all tests; no database required
-cargo clippy --workspace --all-targets -- -D warnings  # CI fails on any warning
-cargo fmt --all                                        # rustfmt.toml: max_width=100
-
-cd migration && cargo run -- up                        # apply migrations (also: down, status, fresh, generate NAME)
-docker compose up                                      # PostgreSQL + migrations + API
+cargo xtask check                 # format, clippy, tests, docs: exactly what CI runs
+cargo xtask fix                   # apply rustfmt + machine-applicable clippy fixes
+cargo run                         # run the API (needs .env + PostgreSQL)
+cd migration && cargo run -- up   # apply migrations (also: down, status, fresh, generate NAME)
+docker compose up                 # PostgreSQL + migrations + API
 ```
 
-Always pass `--workspace`: the repo root is also a package, so plain `cargo build/test` skips the `migration` crate.
+**A change is done when `cargo xtask check` passes.** It needs no database. The toolchain is pinned in `rust-toolchain.toml`, so a local pass means a CI pass. When running cargo directly, pass `--workspace`: the repo root is also a package, so plain `cargo build/test` skips the `migration` and `xtask` crates.
 
 ## Architecture
 

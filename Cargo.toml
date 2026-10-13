@@ -5,7 +5,7 @@ version = "0.1.0"
 edition = "2024"
 
 [workspace]
-members = [".", "migration"]
+members = [".", "migration", "xtask"]
 
 [[bin]]
 name = "mini-rust-api"

@@ -9,6 +9,8 @@ WORKDIR /app
 
 COPY Cargo.toml Cargo.lock ./
 COPY migration/ ./migration/
+# Workspace member; not built, but cargo needs its manifest to load the workspace
+COPY xtask/ ./xtask/
 COPY src/ ./src/
 
 # Cache the cargo registry and target dir between builds; copy the binaries

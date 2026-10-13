@@ -21,15 +21,14 @@ cargo run
 
 ## Commands
 
-| Command                                                 | Description                  |
-| ------------------------------------------------------- | ---------------------------- |
-| `cargo run`                                             | Run the application          |
-| `cargo build --release`                                 | Build for production         |
-| `cargo test --workspace`                                | Run all tests (no DB needed) |
-| `cargo clippy --workspace --all-targets -- -D warnings` | Lint                         |
-| `cargo fmt --all`                                       | Format code                  |
-| `cd migration && cargo run -- up`                       | Apply database migrations    |
-| `docker compose up --build`                             | Run the full stack in Docker |
+| Command                           | Description                                |
+| --------------------------------- | ------------------------------------------ |
+| `cargo run`                       | Run the application                        |
+| `cargo xtask check`               | Format, lint, test and doc checks (as CI)  |
+| `cargo xtask fix`                 | Auto-fix formatting and clippy suggestions |
+| `cargo build --release`           | Build for production                       |
+| `cd migration && cargo run -- up` | Apply database migrations                  |
+| `docker compose up --build`       | Run the full stack in Docker               |
 
 ## API
 
