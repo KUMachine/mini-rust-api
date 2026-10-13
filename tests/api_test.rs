@@ -294,6 +294,8 @@ async fn only_admins_can_list_users() {
         json!({ "count": 2, "rowsPerPage": 1, "page": 1 })
     );
     assert_eq!(body["data"].as_array().unwrap().len(), 1);
+    // Newest first: the admin, with roles in a stable order
+    assert_eq!(body["data"][0]["roles"], json!(["admin", "user"]));
 }
 
 #[tokio::test]

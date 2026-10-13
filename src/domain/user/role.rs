@@ -2,7 +2,7 @@ use std::fmt;
 use std::str::FromStr;
 
 /// User role - a fixed set of roles known at compile time
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Default)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 pub enum Role {
     Admin,
     #[default]

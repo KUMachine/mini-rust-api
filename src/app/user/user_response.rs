@@ -20,6 +20,10 @@ impl UserResponse {
     pub fn try_from_domain(user: &User) -> AppResult<Self> {
         let id = user.id().ok_or(ApplicationError::MissingUserId)?;
 
+        // Sorted so responses are deterministic
+        let mut roles: Vec<_> = user.roles().iter().copied().collect();
+        roles.sort();
+
         Ok(Self {
             id: id.value(),
             email: user.email().as_ref().to_string(),
@@ -27,7 +31,7 @@ impl UserResponse {
             last_name: user.profile().last_name().to_string(),
             age: user.profile().age(),
             created_at: user.created_at().to_string(),
-            roles: user.roles().iter().map(|r| r.to_string()).collect(),
+            roles: roles.iter().map(ToString::to_string).collect(),
         })
     }
 }
