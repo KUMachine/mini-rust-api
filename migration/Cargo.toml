@@ -16,6 +16,6 @@ version = "2.0.0"
 features = [
   # Enable at least one `ASYNC_RUNTIME` and `DATABASE_DRIVER` feature if you want to run migration via CLI.
   # View the list of supported features at https://www.sea-ql.org/SeaORM/docs/install-and-config/database-and-async-runtime.
-  "runtime-tokio-native-tls",  # `ASYNC_RUNTIME` feature
+  "runtime-tokio-rustls",      # `ASYNC_RUNTIME` feature
   "sqlx-postgres",             # `DATABASE_DRIVER` feature
 ]
