@@ -2,7 +2,7 @@
 //!
 //! Handles SeaORM database connection pooling and configuration.
 
-use super::Config;
+use super::app_config::Database as DatabaseSettings;
 use sea_orm::{ConnectOptions, Database, DbConn, DbErr};
 use std::time::Duration;
 
@@ -78,9 +78,9 @@ impl DatabaseConfig {
     }
 }
 
-/// Connect to the database using environment configuration
-pub async fn connect(config: &Config) -> Result<DbConn, DbErr> {
-    DatabaseConfig::new(config.database.build_url())
+/// Connect to the configured PostgreSQL database
+pub async fn connect(settings: &DatabaseSettings) -> Result<DbConn, DbErr> {
+    DatabaseConfig::new(settings.build_url())
         .max_connections(100)
         .min_connections(5)
         .connect_timeout(Duration::from_secs(8))

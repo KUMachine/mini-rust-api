@@ -11,8 +11,8 @@ use crate::app::ports::TokenService;
 use crate::app::user::{CreateUserUseCase, GetUserUseCase, ListUsersUseCase, UpdateUserUseCase};
 use crate::domain::user::UserRepository;
 use crate::infra::auth::JwtTokenService;
-use crate::infra::config::{self, Config};
-use crate::infra::persistence::SeaOrmUserRepository;
+use crate::infra::config::{self, Config, Storage};
+use crate::infra::persistence::{InMemoryUserRepository, SeaOrmUserRepository};
 use crate::presentation::AppState;
 use thiserror::Error;
 
@@ -26,19 +26,23 @@ pub enum BootstrapError {
 /// Bootstrap the application and return the configured AppState
 ///
 /// This function:
-/// 1. Connects to the database
+/// 1. Connects to the configured storage
 /// 2. Creates infrastructure implementations (repositories, services)
 /// 3. Injects them into application use cases
 pub async fn create_app_state(config: &Config) -> Result<AppState, BootstrapError> {
-    // Infrastructure layer: Database connection (internal to bootstrap)
-    let db = Arc::new(
-        config::database::connect(config)
-            .await
-            .map_err(BootstrapError::Database)?,
-    );
-
     // Infrastructure layer: Create adapters
-    let user_repository: Arc<dyn UserRepository> = Arc::new(SeaOrmUserRepository::new(db));
+    let user_repository: Arc<dyn UserRepository> = match &config.storage {
+        Storage::Postgres(database) => {
+            let db = config::database::connect(database)
+                .await
+                .map_err(BootstrapError::Database)?;
+            Arc::new(SeaOrmUserRepository::new(Arc::new(db)))
+        }
+        Storage::Memory => {
+            tracing::warn!("STORAGE=memory: data lives in process memory and is lost on restart");
+            Arc::new(InMemoryUserRepository::new())
+        }
+    };
     let token_service: Arc<dyn TokenService> =
         Arc::new(JwtTokenService::new(config.auth.jwt_secret.as_bytes()));
 

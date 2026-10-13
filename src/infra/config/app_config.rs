@@ -10,9 +10,18 @@ use thiserror::Error;
 /// Main application configuration
 #[derive(Clone, Debug)]
 pub struct Config {
-    pub database: Database,
+    pub storage: Storage,
     pub server: Server,
     pub auth: Auth,
+}
+
+/// Where data is persisted, selected by `STORAGE`
+#[derive(Clone, Debug)]
+pub enum Storage {
+    /// `STORAGE=postgres` (default): PostgreSQL configured by `DATABASE__*`
+    Postgres(Database),
+    /// `STORAGE=memory`: process-local, no database needed, data is lost on restart
+    Memory,
 }
 
 /// Server configuration
@@ -52,11 +61,7 @@ impl fmt::Debug for Auth {
 #[derive(Debug, Error)]
 pub enum ConfigError {
     #[error("{name} is required")]
-    MissingEnv {
-        name: &'static str,
-        #[source]
-        source: dotenvy::Error,
-    },
+    MissingEnv { name: &'static str },
 
     #[error("{name} must not be empty")]
     EmptyEnv { name: &'static str },
@@ -68,6 +73,9 @@ pub enum ConfigError {
         #[source]
         source: ParseIntError,
     },
+
+    #[error("STORAGE must be `postgres` or `memory`, got `{0}`")]
+    InvalidStorage(String),
 }
 
 impl Database {
@@ -82,33 +90,52 @@ impl Database {
 }
 
 impl Config {
-    /// Load configuration from environment variables
+    /// Load configuration from environment variables (and `.env`, if present)
     pub fn from_env() -> Result<Self, ConfigError> {
         dotenvy::dotenv().ok();
+        Self::from_lookup(|name| dotenvy::var(name).ok())
+    }
+
+    /// Load configuration from any variable source
+    pub fn from_lookup(lookup: impl Fn(&str) -> Option<String>) -> Result<Self, ConfigError> {
+        let env = Env(&lookup);
+
+        let storage = match env.or("STORAGE", "postgres").as_str() {
+            "postgres" => Storage::Postgres(Database {
+                username: env.required("DATABASE__USERNAME")?,
+                password: env.required("DATABASE__PASSWORD")?,
+                host: env.required("DATABASE__HOST")?,
+                port: parse_port("DATABASE__PORT", env.required("DATABASE__PORT")?)?,
+                name: env.required("DATABASE__NAME")?,
+            }),
+            "memory" => Storage::Memory,
+            other => return Err(ConfigError::InvalidStorage(other.to_string())),
+        };
 
         Ok(Self {
-            database: Database {
-                username: fetch_env("DATABASE__USERNAME")?,
-                password: fetch_env("DATABASE__PASSWORD")?,
-                host: fetch_env("DATABASE__HOST")?,
-                port: parse_port("DATABASE__PORT", fetch_env("DATABASE__PORT")?)?,
-                name: fetch_env("DATABASE__NAME")?,
-            },
+            storage,
             server: Server {
-                host: fetch_env_with_default("SERVER__HOST", "0.0.0.0"),
-                port: parse_port(
-                    "SERVER__PORT",
-                    fetch_env_with_default("SERVER__PORT", "3000"),
-                )?,
-                cors_allowed_origins: parse_list(&fetch_env_with_default(
-                    "SERVER__CORS_ALLOWED_ORIGINS",
-                    "",
-                )),
+                host: env.or("SERVER__HOST", "0.0.0.0"),
+                port: parse_port("SERVER__PORT", env.or("SERVER__PORT", "3000"))?,
+                cors_allowed_origins: parse_list(&env.or("SERVER__CORS_ALLOWED_ORIGINS", "")),
             },
             auth: Auth {
-                jwt_secret: jwt_secret(fetch_env("JWT_SECRET")?)?,
+                jwt_secret: jwt_secret(env.required("JWT_SECRET")?)?,
             },
         })
+    }
+}
+
+/// Typed access to a variable lookup
+struct Env<'a, F: Fn(&str) -> Option<String>>(&'a F);
+
+impl<F: Fn(&str) -> Option<String>> Env<'_, F> {
+    fn required(&self, name: &'static str) -> Result<String, ConfigError> {
+        (self.0)(name).ok_or(ConfigError::MissingEnv { name })
+    }
+
+    fn or(&self, name: &str, default: &str) -> String {
+        (self.0)(name).unwrap_or_else(|| default.to_string())
     }
 }
 
@@ -127,14 +154,6 @@ fn jwt_secret(secret: String) -> Result<String, ConfigError> {
     }
 
     Ok(secret)
-}
-
-fn fetch_env(name: &'static str) -> Result<String, ConfigError> {
-    dotenvy::var(name).map_err(|source| ConfigError::MissingEnv { name, source })
-}
-
-fn fetch_env_with_default(name: &'static str, default: &str) -> String {
-    dotenvy::var(name).unwrap_or_else(|_| default.to_string())
 }
 
 fn parse_port(name: &'static str, value: String) -> Result<u16, ConfigError> {
@@ -159,6 +178,53 @@ fn parse_list(value: &str) -> Vec<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::collections::HashMap;
+
+    const SECRET: &str = "a-sufficiently-long-random-secret-value";
+
+    fn load(vars: &[(&str, &str)]) -> Result<Config, ConfigError> {
+        let vars: HashMap<String, String> = vars
+            .iter()
+            .map(|(k, v)| (k.to_string(), v.to_string()))
+            .collect();
+        Config::from_lookup(|name| vars.get(name).cloned())
+    }
+
+    #[test]
+    fn test_postgres_storage_is_default_and_requires_database_vars() {
+        assert!(matches!(
+            load(&[("JWT_SECRET", SECRET)]),
+            Err(ConfigError::MissingEnv {
+                name: "DATABASE__USERNAME"
+            })
+        ));
+
+        let config = load(&[
+            ("JWT_SECRET", SECRET),
+            ("DATABASE__USERNAME", "postgres"),
+            ("DATABASE__PASSWORD", "secret"),
+            ("DATABASE__HOST", "localhost"),
+            ("DATABASE__PORT", "5432"),
+            ("DATABASE__NAME", "app"),
+        ])
+        .unwrap();
+        assert!(matches!(config.storage, Storage::Postgres(ref db) if db.port == 5432));
+        assert_eq!(config.server.port, 3000);
+    }
+
+    #[test]
+    fn test_memory_storage_needs_no_database_vars() {
+        let config = load(&[("STORAGE", "memory"), ("JWT_SECRET", SECRET)]).unwrap();
+        assert!(matches!(config.storage, Storage::Memory));
+    }
+
+    #[test]
+    fn test_unknown_storage_is_rejected() {
+        assert!(matches!(
+            load(&[("STORAGE", "redis"), ("JWT_SECRET", SECRET)]),
+            Err(ConfigError::InvalidStorage(value)) if value == "redis"
+        ));
+    }
 
     #[test]
     fn test_parse_list() {
@@ -175,6 +241,6 @@ mod tests {
             jwt_secret("  ".to_string()),
             Err(ConfigError::EmptyEnv { name: "JWT_SECRET" })
         ));
-        assert!(jwt_secret("a-sufficiently-long-random-secret-value".to_string()).is_ok());
+        assert!(jwt_secret(SECRET.to_string()).is_ok());
     }
 }

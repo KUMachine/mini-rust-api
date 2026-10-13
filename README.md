@@ -11,7 +11,10 @@ cp .env.example .env
 # 2a. Run everything with Docker (PostgreSQL + migrations + API)
 docker compose up --build
 
-# 2b. Or run locally against the Docker database
+# 2b. Or run locally without any database (in-memory, data lost on restart)
+STORAGE=memory cargo run
+
+# 2c. Or run locally against the Docker database
 docker compose up -d postgresql
 (cd migration && cargo run -- up)
 cargo run
