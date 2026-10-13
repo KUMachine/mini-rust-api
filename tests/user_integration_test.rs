@@ -3,6 +3,9 @@
 //! These tests verify the complete lifecycle of a User,
 //! including registration, authentication, profile updates, and email changes.
 
+// Test helpers fail loudly by design
+#![allow(clippy::unwrap_used)]
+
 use mini_rust_api::domain::user::{Email, User};
 
 /// Test the complete user registration and authentication flow

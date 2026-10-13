@@ -3,6 +3,9 @@
 //! These tests drive the real router with an in-memory repository, covering
 //! routing, extractors, authentication, authorization and error formatting.
 
+// Test helpers fail loudly by design
+#![allow(clippy::unwrap_used)]
+
 use std::sync::Arc;
 
 use axum::Router;

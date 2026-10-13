@@ -43,8 +43,9 @@ presentation  →  app  →  domain  ←  infra
 4. **Errors**: domain → `DomainError`, persistence → `RepositoryError` (storage-agnostic, e.g. `Conflict`, `PersistenceFailure`), both wrapped by `ApplicationError`. `presentation/errors.rs` maps them to JSON:API responses. Internal failures are logged with `tracing::error!` and return a generic detail, so database or JWT error text never reaches clients.
 5. **Email uniqueness**: use cases pre-check with `exists_with_email`, and also map `RepositoryError::Conflict` from `save` to `EmailAlreadyExists` (409) to cover races. See `app/user/registration.rs::email_conflict`.
 6. **bcrypt is CPU-heavy**: wrap hashing and verification in `app::blocking::run_blocking` so it runs off the async workers.
-7. **Request bodies**: use `ValidatedJson<T>` (for `T: Validate`) or `JsonBody<T>`, never `axum::Json`, so malformed input returns JSON:API errors.
-8. **Repository writes are transactional**: `SeaOrmUserRepository::save` writes the user and its roles in one transaction. Load related data in batches, never per row.
+7. **Fallible code returns errors**: `unwrap()` is denied outside tests (workspace clippy lint). Propagate with `?`, or use `expect("why this cannot fail")` for true invariants.
+8. **Request bodies**: use `ValidatedJson<T>` (for `T: Validate`) or `JsonBody<T>`, never `axum::Json`, so malformed input returns JSON:API errors.
+9. **Repository writes are transactional**: `SeaOrmUserRepository::save` writes the user and its roles in one transaction. Load related data in batches, never per row.
 
 ## Adding a Feature
 

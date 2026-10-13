@@ -5,6 +5,9 @@
 //! `super::super::infra::X` and `use crate::{infra::X}` are all caught.
 //! `#[cfg(test)]` modules at the end of a file are exempt.
 
+// Test helpers fail loudly by design
+#![allow(clippy::unwrap_used)]
+
 use std::fs;
 use std::path::{Path, PathBuf};
 

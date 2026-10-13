@@ -7,6 +7,12 @@ edition = "2024"
 [workspace]
 members = [".", "migration", "xtask"]
 
+[workspace.lints.clippy]
+unwrap_used = "deny"
+
+[lints]
+workspace = true
+
 [[bin]]
 name = "mini-rust-api"
 path = "src/main.rs"
