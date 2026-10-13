@@ -1,75 +1,37 @@
+# syntax=docker/dockerfile:1
+
 # ===========================
-# 🚧 Build Stage
+# Build Stage
 # ===========================
-FROM rust:1.85-slim AS builder
+FROM rust:1.97-slim-trixie AS builder
 
-# Install build dependencies including OpenSSL
-RUN apt-get update \
- && apt-get install -y --no-install-recommends \
-      gcc libssl-dev pkg-config make ca-certificates openssl \
-      libssl3 \
- && rm -rf /var/lib/apt/lists/*
-
-# Set pkg-config to find OpenSSL
-ENV PKG_CONFIG_PATH=/usr/lib/x86_64-linux-gnu/pkgconfig
-ENV OPENSSL_LIB_DIR=/usr/lib/x86_64-linux-gnu
-ENV OPENSSL_INCLUDE_DIR=/usr/include/openssl
-ENV OPENSSL_STATIC=0
-
-# Optimize for faster builds
-ENV CARGO_INCREMENTAL=1
-
-# Create a new empty shell project
 WORKDIR /app
 
-# Copy dependency files and migration folder first (for better caching)
-COPY Cargo.toml ./
+COPY Cargo.toml Cargo.lock ./
 COPY migration/ ./migration/
-
-# Create minimal source structure for dependency resolution
-RUN mkdir -p src && \
-    echo "fn main() {}" > src/main.rs && \
-    echo "fn main() {}" > src/lib.rs
-
-# Pre-download and cache dependencies (this layer will be cached if Cargo.toml/lock haven't changed)
-RUN cargo fetch
-
-# Remove dummy files and copy actual source code
-RUN rm -rf src
 COPY src/ ./src/
 
-# Build the actual application (this layer will only rebuild if source code changes)
-RUN cargo build --release
+# Cache the cargo registry and target dir between builds; copy the binaries
+# out because cache mounts are not part of the image
+RUN --mount=type=cache,target=/usr/local/cargo/registry \
+    --mount=type=cache,target=/app/target \
+    cargo build --release --locked --bin mini-rust-api --bin migration \
+ && mkdir -p /out \
+ && cp target/release/mini-rust-api target/release/migration /out/
 
 
 # ===========================
-# 🏁 Final Stage (Minimal Runtime)
+# Runtime Stage
 # ===========================
-FROM scratch AS runtime
+# distroless/cc ships glibc and libgcc only; TLS uses rustls with bundled roots
+FROM gcr.io/distroless/cc-debian13:nonroot AS runtime
 
-# Copy the binary from the builder
-COPY --from=builder /app/target/release/mini-rust-api /usr/src/app
+COPY --from=builder /out/mini-rust-api /usr/local/bin/mini-rust-api
+COPY --from=builder /out/migration /usr/local/bin/migration
 
-# Set mimalloc optimization environment variables
-ENV MIMALLOC_SHOW_STATS=1
-ENV MIMALLOC_PAGE_RESET=1
-ENV MIMALLOC_SECURE=1
-ENV MIMALLOC_LARGE_OS_PAGES=1
-ENV MIMALLOC_RESERVE_HUGE_OS_PAGES=1
-ENV MIMALLOC_EAGER_COMMIT=1
-ENV MIMALLOC_EAGER_REGION_COMMIT=1
+ENV SERVER__HOST=0.0.0.0 \
+    SERVER__PORT=3000
 
-# Copy necessary shared libraries for glibc
-COPY --from=builder /lib/x86_64-linux-gnu/libc.so.6 /lib/x86_64-linux-gnu/
-COPY --from=builder /lib/x86_64-linux-gnu/libm.so.6 /lib/x86_64-linux-gnu/
-COPY --from=builder /lib/x86_64-linux-gnu/libdl.so.2 /lib/x86_64-linux-gnu/
-COPY --from=builder /lib/x86_64-linux-gnu/librt.so.1 /lib/x86_64-linux-gnu/
-COPY --from=builder /lib/x86_64-linux-gnu/libpthread.so.0 /lib/x86_64-linux-gnu/
-COPY --from=builder /lib/x86_64-linux-gnu/libgcc_s.so.1 /lib/x86_64-linux-gnu/
-COPY --from=builder /usr/lib/x86_64-linux-gnu/libcrypto.so.3 /lib/x86_64-linux-gnu/
-COPY --from=builder /usr/lib/x86_64-linux-gnu/libssl.so.3 /lib/x86_64-linux-gnu/
-COPY --from=builder /lib64/ld-linux-x86-64.so.2 /lib64/
-COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
+EXPOSE 3000
 
-# Set binary as entrypoint
-ENTRYPOINT ["/usr/src/app"]
+ENTRYPOINT ["/usr/local/bin/mini-rust-api"]
