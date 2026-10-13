@@ -5,4 +5,4 @@
 pub mod app_config;
 pub mod database;
 
-pub use app_config::{Config, ConfigError, Storage};
+pub use app_config::{AdminSeed, Config, ConfigError, Storage};

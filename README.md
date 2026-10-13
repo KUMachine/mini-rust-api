@@ -45,6 +45,8 @@ cargo run
 | GET    | `/users/{id}` | Owner / Admin | Get a user                |
 | PUT    | `/users/{id}` | Owner / Admin | Update a user             |
 
+To get an admin, set `ADMIN_EMAIL` and `ADMIN_PASSWORD` (see `.env.example`); the account is created or promoted on startup.
+
 Errors follow the [JSON:API error format](https://jsonapi.org/format/#errors).
 
 ## Project Structure

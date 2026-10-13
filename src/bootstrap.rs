@@ -6,9 +6,13 @@
 
 use std::sync::Arc;
 
+use crate::app::ApplicationError;
 use crate::app::auth::{AuthenticateUseCase, LoginUseCase, RegisterUseCase};
 use crate::app::ports::TokenService;
-use crate::app::user::{CreateUserUseCase, GetUserUseCase, ListUsersUseCase, UpdateUserUseCase};
+use crate::app::user::{
+    CreateUserUseCase, EnsureAdminOutcome, EnsureAdminUseCase, GetUserUseCase, ListUsersUseCase,
+    UpdateUserUseCase,
+};
 use crate::domain::user::UserRepository;
 use crate::infra::auth::JwtTokenService;
 use crate::infra::config::{self, Config, Storage};
@@ -21,6 +25,9 @@ use thiserror::Error;
 pub enum BootstrapError {
     #[error("failed to connect to database")]
     Database(#[source] sea_orm::DbErr),
+
+    #[error("failed to ensure the admin account from ADMIN_EMAIL")]
+    AdminSeed(#[source] ApplicationError),
 }
 
 /// Bootstrap the application and return the configured AppState
@@ -28,7 +35,8 @@ pub enum BootstrapError {
 /// This function:
 /// 1. Connects to the configured storage
 /// 2. Creates infrastructure implementations (repositories, services)
-/// 3. Injects them into application use cases
+/// 3. Ensures the admin account from `ADMIN_EMAIL`/`ADMIN_PASSWORD`, if configured
+/// 4. Injects adapters into application use cases
 pub async fn create_app_state(config: &Config) -> Result<AppState, BootstrapError> {
     // Infrastructure layer: Create adapters
     let user_repository: Arc<dyn UserRepository> = match &config.storage {
@@ -45,6 +53,21 @@ pub async fn create_app_state(config: &Config) -> Result<AppState, BootstrapErro
     };
     let token_service: Arc<dyn TokenService> =
         Arc::new(JwtTokenService::new(config.auth.jwt_secret.as_bytes()));
+
+    if let Some(seed) = &config.admin_seed {
+        let outcome = EnsureAdminUseCase::new(user_repository.clone())
+            .execute(&seed.email, &seed.password)
+            .await
+            .map_err(BootstrapError::AdminSeed)?;
+        match outcome {
+            EnsureAdminOutcome::Created => tracing::info!(email = %seed.email, "admin created"),
+            EnsureAdminOutcome::Promoted => tracing::info!(
+                email = %seed.email,
+                "existing user promoted to admin; their password was not changed"
+            ),
+            EnsureAdminOutcome::AlreadyAdmin => {}
+        }
+    }
 
     Ok(build_app_state(user_repository, token_service))
 }

@@ -13,6 +13,8 @@ pub struct Config {
     pub storage: Storage,
     pub server: Server,
     pub auth: Auth,
+    /// Admin account ensured at startup, from `ADMIN_EMAIL` + `ADMIN_PASSWORD`
+    pub admin_seed: Option<AdminSeed>,
 }
 
 /// Where data is persisted, selected by `STORAGE`
@@ -69,6 +71,22 @@ impl fmt::Debug for Auth {
     }
 }
 
+/// Credentials for the admin account ensured at startup
+#[derive(Clone)]
+pub struct AdminSeed {
+    pub email: String,
+    pub password: String,
+}
+
+impl fmt::Debug for AdminSeed {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("AdminSeed")
+            .field("email", &self.email)
+            .field("password", &"[REDACTED]")
+            .finish()
+    }
+}
+
 /// Configuration loading errors
 #[derive(Debug, Error)]
 pub enum ConfigError {
@@ -88,6 +106,9 @@ pub enum ConfigError {
 
     #[error("STORAGE must be `postgres` or `memory`, got `{0}`")]
     InvalidStorage(String),
+
+    #[error("ADMIN_EMAIL and ADMIN_PASSWORD must be set together")]
+    IncompleteAdminSeed,
 }
 
 impl Database {
@@ -134,6 +155,11 @@ impl Config {
             auth: Auth {
                 jwt_secret: jwt_secret(env.required("JWT_SECRET")?)?,
             },
+            admin_seed: match (env.optional("ADMIN_EMAIL"), env.optional("ADMIN_PASSWORD")) {
+                (Some(email), Some(password)) => Some(AdminSeed { email, password }),
+                (None, None) => None,
+                _ => return Err(ConfigError::IncompleteAdminSeed),
+            },
         })
     }
 }
@@ -144,6 +170,11 @@ struct Env<'a, F: Fn(&str) -> Option<String>>(&'a F);
 impl<F: Fn(&str) -> Option<String>> Env<'_, F> {
     fn required(&self, name: &'static str) -> Result<String, ConfigError> {
         (self.0)(name).ok_or(ConfigError::MissingEnv { name })
+    }
+
+    /// The variable's value, treating an empty value as unset
+    fn optional(&self, name: &str) -> Option<String> {
+        (self.0)(name).filter(|value| !value.trim().is_empty())
     }
 
     fn or(&self, name: &str, default: &str) -> String {
@@ -244,6 +275,32 @@ mod tests {
     fn test_memory_storage_needs_no_database_vars() {
         let config = load(&[("STORAGE", "memory"), ("JWT_SECRET", SECRET)]).unwrap();
         assert!(matches!(config.storage, Storage::Memory));
+    }
+
+    #[test]
+    fn test_admin_seed_requires_email_and_password_together() {
+        let base = [("STORAGE", "memory"), ("JWT_SECRET", SECRET)];
+        assert!(load(&base).unwrap().admin_seed.is_none());
+
+        let with = |extra: &[(&'static str, &'static str)]| {
+            let mut vars = base.to_vec();
+            vars.extend_from_slice(extra);
+            load(&vars)
+        };
+        assert!(matches!(
+            with(&[("ADMIN_EMAIL", "admin@example.com")]),
+            Err(ConfigError::IncompleteAdminSeed)
+        ));
+
+        let seed = with(&[
+            ("ADMIN_EMAIL", "admin@example.com"),
+            ("ADMIN_PASSWORD", "SecurePass123"),
+        ])
+        .unwrap()
+        .admin_seed
+        .unwrap();
+        assert_eq!(seed.email, "admin@example.com");
+        assert!(!format!("{seed:?}").contains("SecurePass123"));
     }
 
     #[test]

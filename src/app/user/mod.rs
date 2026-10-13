@@ -1,4 +1,5 @@
 pub mod create_user_use_case;
+pub mod ensure_admin_use_case;
 pub mod get_user_use_case;
 pub mod list_users_use_case;
 pub(crate) mod registration;
@@ -6,6 +7,7 @@ pub mod update_user_use_case;
 pub mod user_response;
 
 pub use create_user_use_case::CreateUserUseCase;
+pub use ensure_admin_use_case::{EnsureAdminOutcome, EnsureAdminUseCase};
 pub use get_user_use_case::GetUserUseCase;
 pub use list_users_use_case::ListUsersUseCase;
 pub use update_user_use_case::UpdateUserUseCase;

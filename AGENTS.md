@@ -59,11 +59,11 @@ Work inside-out, one layer at a time:
 
 - **Domain**: unit tests next to the code, no mocks.
 - **HTTP**: `tests/api_test.rs` drives the real router with `InMemoryUserRepository` via `tower::ServiceExt::oneshot`. Add a case there for every new endpoint and status code.
-- **End to end**: `STORAGE=memory cargo run`, then exercise the endpoints with curl. No database or Docker needed.
+- **End to end**: `STORAGE=memory ADMIN_EMAIL=admin@example.com ADMIN_PASSWORD=AdminPass123 cargo run`, then exercise the endpoints with curl (log in as the admin for admin routes). No database or Docker needed.
 - **SeaORM queries**: unit tests in the repository module use `sea_orm::MockDatabase` and assert on the transaction log.
 
 ## Configuration
 
-Loaded from the environment / `.env` (see `.env.example`) by `Config::from_lookup`, which tests call with a map instead of touching the process environment. Required: `JWT_SECRET` (non-empty; 32+ bytes recommended), plus `DATABASE__USERNAME`, `DATABASE__PASSWORD`, `DATABASE__HOST`, `DATABASE__PORT`, `DATABASE__NAME` when `STORAGE=postgres` (the default). Optional: `STORAGE` (`postgres` | `memory`), `SERVER__HOST` (0.0.0.0), `SERVER__PORT` (3000), `SERVER__CORS_ALLOWED_ORIGINS` (comma-separated, none by default), `RUST_LOG` (defaults to `info`).
+Loaded from the environment / `.env` (see `.env.example`) by `Config::from_lookup`, which tests call with a map instead of touching the process environment. Required: `JWT_SECRET` (non-empty; 32+ bytes recommended), plus `DATABASE__USERNAME`, `DATABASE__PASSWORD`, `DATABASE__HOST`, `DATABASE__PORT`, `DATABASE__NAME` when `STORAGE=postgres` (the default). Optional: `STORAGE` (`postgres` | `memory`), `ADMIN_EMAIL` + `ADMIN_PASSWORD` (admin ensured at startup by `EnsureAdminUseCase`; set both or neither), `SERVER__HOST` (0.0.0.0), `SERVER__PORT` (3000), `SERVER__CORS_ALLOWED_ORIGINS` (comma-separated, none by default), `RUST_LOG` (defaults to `info`).
 
 Swagger UI is served at `/api-docs`.
